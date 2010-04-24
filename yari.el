@@ -24,6 +24,33 @@
 
 ;;; Code:
 
+(require 'thingatpt)
+
+;;;###autoload
+;; (defun ri (&optional rehash)
+;;   "Look up Ruby documentation."
+;;   (interactive)
+;;   (setq ri-documented (or ri-documented (ri-completing-read)))
+;;   (let ((ri-buffer-name (format "*ri %s*" ri-documented)))
+;;     (unless (get-buffer ri-buffer-name)
+;;       (let ((ri-buffer (get-buffer-create ri-buffer-name))
+;;             (ri-content (ri-query ri-documented)))
+;;         (display-buffer ri-buffer)
+;;         (with-current-buffer ri-buffer
+;;           (erase-buffer)
+;;           (insert ri-content)
+;;           (ansi-color-apply-on-region (point-min) (point-max))
+;;           (goto-char (point-min))
+;;           (ri-mode))))
+;;     (display-buffer ri-buffer-name)))
+
+(defun yari-ri-lookup (name)
+  "Return content from ri for NAME."
+  (assert (member name (yari-ruby-obarray)) nil
+          (format "%s is unknown symbol to RI." name))
+  (shell-command-to-string
+   (format "ri -T %s" (shell-quote-argument name))))
+
 (defvar yari-ruby-obarray-cache nil
   "Variable to store all possible completions of RI pages.")
 
@@ -47,6 +74,16 @@
 ;;; Tests:
 
 (when (featurep 'ert)
+  (ert-deftest yari-test-ri-lookup-should-generate-error ()
+    (ert-should-error
+     (yari-ri-lookup "AbSoLuTttelyImposibleThisexists#bbb?")))
+
+  (ert-deftest yari-test-ri-lookup-should-have-content ()
+    (ert-should (string-match "Array < Object" (yari-ri-lookup "Array"))))
+
+  (ert-deftest yari-test-ri-lookup ()
+    (ert-should (yari-ri-lookup "Array")))
+
   (ert-deftest yari-test-ruby-methods-from-ri-filter-standard-warning ()
     (ert-should-not (member ". not found, maybe you meant:"
                             (yari-ruby-methods-from-ri))))
