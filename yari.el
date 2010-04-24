@@ -29,7 +29,7 @@
 
 (defun yari-ruby-obarray (&optional rehash)
   "Build collection of classes and methods for completions."
-  (if (not (null yari-ruby-obarray-cache))
+  (if (and (null rehash) (consp yari-ruby-obarray-cache))
       ;; TODO: I do not know how to return from here properly... ;]
       (setq yari-ruby-obarray-cache yari-ruby-obarray-cache)
     (let* ((methods (yari-ruby-methods-from-ri))
@@ -54,9 +54,13 @@
   (ert-deftest yari-test-ruby-methods-from-ri-filter-empty-string ()
     (ert-should-not (member "" (yari-ruby-methods-from-ri))))
 
+  (ert-deftest yari-test-ruby-obarray-should-rehash ()
+    (yari-with-ruby-obarray-cache-mock cache-mock
+      (yari-ruby-obarray t)
+      (ert-should-not (equal yari-ruby-obarray-cache cache-mock))))
+
   (ert-deftest yari-test-ruby-obarray-should-use-cache ()
-    (let* ((cache-mock '("NotExistClassInRuby" "NotExistClassInRuby#mmmmm"))
-           (yari-ruby-obarray-cache cache-mock))
+    (yari-with-ruby-obarray-cache-mock cache-mock
       (yari-ruby-obarray)
       (ert-should (equal yari-ruby-obarray-cache cache-mock))))
 
@@ -72,7 +76,14 @@
     (ert-should (member "Array::new" (yari-ruby-obarray))))
 
   (ert-deftest yari-test-ruby-obarray-for-object-method ()
-    (ert-should (member "Array#size" (yari-ruby-obarray)))))
+    (ert-should (member "Array#size" (yari-ruby-obarray))))
+
+  (defmacro yari-with-ruby-obarray-cache-mock (cache-mock &rest body)
+    (declare (indent 1))
+    `(unwind-protect
+         (let* ((,cache-mock '("NotExistClassInRuby" "NotExistClassInRuby#mmmmm"))
+		(yari-ruby-obarray-cache ,cache-mock))
+           ,@body))))
 
 (provide 'yari)
 ;;; yari.el ends here
