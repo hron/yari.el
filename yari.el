@@ -24,35 +24,46 @@
 
 ;;; Code:
 
-(defvar yari-collection-cache nil
+(defvar yari-ruby-obarray-cache nil
   "Variable to store all possible completions of RI pages.")
 
 (defun yari-ruby-obarray (&optional rehash)
   "Build collection of classes and methods for completions."
-  (if (not (null yari-collection-cache))
+  (if (not (null yari-ruby-obarray-cache))
       ;; TODO: I do not know how to return from here properly... ;]
-      (setq yari-collection-cache yari-collection-cache)
-    (let* ((methods (split-string (shell-command-to-string "ri -T '.'")))
+      (setq yari-ruby-obarray-cache yari-ruby-obarray-cache)
+    (let* ((methods (yari-ruby-methods-from-ri))
            (classes (delete-dups (mapcar '(lambda (m)
                                             (car (split-string m "#\\|::")))
                                          methods))))
-      (setq yari-collection-cache (append methods classes)))))
+      (setq yari-ruby-obarray-cache (append methods classes)))))
+
+(defun yari-ruby-methods-from-ri ()
+  "Return list with all ruby methods known to ri command."
+  (delete ". not found, maybe you meant:"
+          (delete ""
+                  (split-string (shell-command-to-string "ri -T '.'") "\n"))))
 
 ;;; Tests:
 
 (when (featurep 'ert)
-  ;; (ert-deftest yari-test-ruby-obarray-should-filter-errors ()
+  (ert-deftest yari-test-ruby-methods-from-ri-filter-standard-warning ()
+    (ert-should-not (member ". not found, maybe you meant:"
+                            (yari-ruby-methods-from-ri))))
+
+  (ert-deftest yari-test-ruby-methods-from-ri-filter-empty-string ()
+    (ert-should-not (member "" (yari-ruby-methods-from-ri))))
 
   (ert-deftest yari-test-ruby-obarray-should-use-cache ()
     (let* ((cache-mock '("NotExistClassInRuby" "NotExistClassInRuby#mmmmm"))
-           (yari-collection-cache cache-mock))
+           (yari-ruby-obarray-cache cache-mock))
       (yari-ruby-obarray)
-      (ert-should (equal yari-collection-cache cache-mock))))
+      (ert-should (equal yari-ruby-obarray-cache cache-mock))))
 
   (ert-deftest yari-test-ruby-obarray-should-set-cache ()
-    (let ((yari-collection-cache))
+    (let ((yari-ruby-obarray-cache))
       (yari-ruby-obarray)
-      (ert-should yari-collection-cache)))
+      (ert-should yari-ruby-obarray-cache)))
 
   (ert-deftest yari-test-ruby-obarray-for-class ()
     (ert-should (member "Array" (yari-ruby-obarray))))
