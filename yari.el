@@ -53,7 +53,7 @@
   (buffer-disable-undo)
   (kill-all-local-variables)
   (use-local-map yari-mode-map)
-  (setq mode-name "ri")
+  (setq mode-name "yari")
   (setq major-mode 'yari-mode)
   (setq buffer-read-only t)
   (run-hooks 'yari-mode-hook))
