@@ -26,23 +26,45 @@
 
 (require 'thingatpt)
 
+(defvar yari-mode-hook nil
+  "Hooks to run when invoking yari-mode.")
+
 ;;;###autoload
-;; (defun ri (&optional rehash)
-;;   "Look up Ruby documentation."
-;;   (interactive)
-;;   (setq ri-documented (or ri-documented (ri-completing-read)))
-;;   (let ((ri-buffer-name (format "*ri %s*" ri-documented)))
-;;     (unless (get-buffer ri-buffer-name)
-;;       (let ((ri-buffer (get-buffer-create ri-buffer-name))
-;;             (ri-content (ri-query ri-documented)))
-;;         (display-buffer ri-buffer)
-;;         (with-current-buffer ri-buffer
-;;           (erase-buffer)
-;;           (insert ri-content)
-;;           (ansi-color-apply-on-region (point-min) (point-max))
-;;           (goto-char (point-min))
-;;           (ri-mode))))
-;;     (display-buffer ri-buffer-name)))
+(defun yari (&optional ri-topic rehash)
+  "Look up Ruby documentation."
+  (interactive (list nil current-prefix-arg))
+  (setq ri-topic (or ri-topic (completing-read "yari: "
+                                               (yari-ruby-obarray rehash))))
+  (let ((yari-buffer-name (format "*yari %s*" ri-topic)))
+    (unless (get-buffer yari-buffer-name)
+      (let ((yari-buffer (get-buffer-create yari-buffer-name))
+            (ri-content (yari-ri-lookup ri-topic)))
+        (display-buffer yari-buffer)
+        (with-current-buffer yari-buffer
+          (erase-buffer)
+          (insert ri-content)
+          (ansi-color-apply-on-region (point-min) (point-max))
+          (goto-char (point-min))
+          (yari-mode))))
+    (display-buffer yari-buffer-name)))
+
+(defun yari-mode ()
+  "Mode for viewing Ruby documentation."
+  (buffer-disable-undo)
+  (kill-all-local-variables)
+  (use-local-map yari-mode-map)
+  (setq mode-name "ri")
+  (setq major-mode 'yari-mode)
+  (setq buffer-read-only t)
+  (run-hooks 'yari-mode-hook))
+
+(defvar yari-mode-map
+  (let ((map (make-keymap)))
+    (suppress-keymap map t)
+    (define-key map (kbd "q")    'quit-window)
+    (define-key map (kbd "SPC")  'scroll-up)
+    (define-key map (kbd "\C-?") 'scroll-down)
+    map))
 
 (defun yari-ri-lookup (name)
   "Return content from ri for NAME."
