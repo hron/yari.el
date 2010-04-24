@@ -22,7 +22,11 @@ end
 
 def run string
   puts "\n#{string}"
-  system string
+  `rvm gemset list | egrep '^rdoc'`.split.each do |gemset|
+    system <<-SHELL || break
+#{ENV['SHELL']} -c "rvm gemset use #{gemset} && ri --version && #{string}"
+SHELL
+  end
 end
 
 # --------------------------------------------------
