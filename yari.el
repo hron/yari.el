@@ -26,8 +26,14 @@
 
 (require 'thingatpt)
 
-(defvar yari-mode-hook nil
-  "Hooks to run when invoking yari-mode.")
+(defgroup yari nil
+  "Yet Another Ri Interface."
+  :group 'programming)
+
+(defcustom yari-mode-hook nil
+  "Hooks to run when invoking yari-mode."
+  :group 'yari
+  :type 'hook)
 
 ;;;###autoload
 (defun yari (&optional ri-topic rehash)
