@@ -98,14 +98,11 @@
     (yari-ri-lookup "AbSoLuTttelyImposibleThisexists#bbb?")))
 
  (ert-deftest yari-test-ri-lookup-should-have-content ()
-   (ert-should (string-match "Array < Object" (yari-ri-lookup "Array"))))
+   (ert-should (string-match "RDoc - Ruby Documentation System"
+                             (yari-ri-lookup "RDoc"))))
 
  (ert-deftest yari-test-ri-lookup ()
-   (ert-should (yari-ri-lookup "Array")))
-
- (ert-deftest yari-test-ruby-methods-from-ri-filter-standard-ruler ()
-   (ert-should-not (member "----------------------------------------------"
-                           (yari-ruby-methods-from-ri)))))
+   (ert-should (yari-ri-lookup "RDoc"))))
 
 
 (defvar yari-ruby-obarray-cache nil
@@ -181,22 +178,23 @@
 
 (defun yari-ruby-methods-from-ri ()
   "Return list with all ruby methods known to ri command."
-  (let* ((ri-version (cadr (split-string
-                            (shell-command-to-string "ri --version"))))
-         ;; 2.5.6, we need '5'
-         (ri-major-version (nth 1 (split-string ri-version "\\."))))
-    (cond ((equal ri-major-version "4")
-           ;; remove first to lines
-           (delq nil
-                 (mapcar '(lambda (name) (car (split-string name)))
-                         (cddr (split-string
-				(shell-command-to-string "ri -T") "\n")))))
-          (t
-           (delete-if '(lambda (name)
+  (cond ((yari-ri-version-at-least "2.5")
+         (delete-if '(lambda (name)
                          (or (string= ". not found, maybe you meant:" name)
                              (string= "" name)))
                       (split-string (shell-command-to-string "ri -T '.'")
-                                    "\n"))))))
+                                    "\n")))
+	(t
+         (let ((ruby-code "require 'rdoc/ri/reader'; \
+                           require 'rdoc/ri/cache';  \
+                           require 'rdoc/ri/paths';  \
+                           all_paths = RDoc::RI::Paths.path(true,true,true,true); \
+                           cache  = RDoc::RI::Cache.new(all_paths); \
+                           reader = RDoc::RI::Reader.new(cache);    \
+                           puts reader.all_names"))
+           (split-string (shell-command-to-string
+                          (format "ruby -e\"%s\"" ruby-code)))))))
+
 
 (when-ert-loaded
  (ert-deftest yari-test-ruby-methods-from-ri-filter-standard-warning ()
@@ -204,48 +202,44 @@
                            (yari-ruby-methods-from-ri))))
 
  (ert-deftest yari-test-ruby-methods-from-ri-filter-empty-string ()
-   (ert-should-not (member "" (yari-ruby-methods-from-ri)))))
+   (ert-should-not (member "" (yari-ruby-methods-from-ri))))
 
+ (ert-deftest yari-test-ruby-methods-from-ri-filter-standard-ruler ()
+   (ert-should-not (member "----------------------------------------------"
+                           (yari-ruby-methods-from-ri)))))
 
 (defun yari-ruby-classes-from-ri ()
   "Return list with all ruby classes/modules know to ri command."
-  (let ((ruby-code "require 'rdoc/ri/driver';       \
-                    driver  = RDoc::RI::Driver.new; \
-                    classes = [];                   \
-                    driver.stores.each do |store|   \
-                      classes << store.modules;     \
-                    end;                            \
-                    puts classes.flatten.uniq"))
-    (split-string (shell-command-to-string
-                   (format "ruby -e\"%s\"" ruby-code)))))
+    (cond ((yari-ri-version-at-least "2.5")
+           (let ((ruby-code "require 'rdoc/ri/driver';       \
+                             driver  = RDoc::RI::Driver.new; \
+                             classes = [];                   \
+                             driver.stores.each do |store|   \
+                               classes << store.modules;     \
+                             end;                            \
+                             puts classes.flatten.uniq"))
+             (split-string (shell-command-to-string
+                            (format "ruby -e\"%s\"" ruby-code)))))
+          (t
+           (delq nil
+                 (mapcar '(lambda (name) (car (split-string name)))
+                         (cddr (split-string
+				(shell-command-to-string "ri -T") "\n")))))))
 
 (when-ert-loaded
  (ert-deftest yari-test-ruby-classes-from-ri ()
    (yari-with-ruby-obarray-cache-mock cache-mock
      (ert-should (member "RDoc" (yari-ruby-classes-from-ri))))))
 
-(defun yari-ri-version ()
+(defun yari-get-ri-version ()
   "Return list of version parts or RI."
-  (let ((parts (mapcar
-		'string-to-number
-		(split-string (cadr (split-string
-                                     (shell-command-to-string "ri --version")))
-                              "\\."))))
-    (when (equal 2 (length parts)) (add-to-list 'parts nil t))
-    parts))
+  (cadr (split-string
+         (shell-command-to-string "ri --version"))))
 
-(when-ert-loaded
- (ert-deftest yari-test-ri-version-should-return-list-of-2-or-3-numbers ()
-   (ert-should (and (numberp (nth 0 (yari-ri-version)))
-                    (numberp (nth 1 (yari-ri-version)))
-                    (or (numberp (nth 2 (yari-ri-version)))
-			(null (nth 2 (yari-ri-version)))))))
-
- (ert-deftest yari-test-ri-version-should-return-list-of-3-elements ()
-   (ert-should (and (listp (yari-ri-version))
-                    (equal 3 (length (yari-ri-version)))))))
-
-
+(defun yari-ri-version-at-least (minimum)
+  "Detect if RI version at least MINIMUM."
+  (let ((ri-version (yari-get-ri-version)))
+    (or (string< minimum ri-version) (string= minimum ri-version))))
 
 
 (provide 'yari)
