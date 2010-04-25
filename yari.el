@@ -224,7 +224,7 @@
            (delq nil
                  (mapcar '(lambda (name) (car (split-string name)))
                          (cddr (split-string
-				(shell-command-to-string "ri -T") "\n")))))))
+				(shell-command-to-string "ri -T") "[ \n,]+")))))))
 
 (when-ert-loaded
  (ert-deftest yari-test-ruby-classes-from-ri ()
