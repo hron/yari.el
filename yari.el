@@ -88,20 +88,65 @@
       ;; TODO: I do not know how to return from here properly... ;]
       (setq yari-ruby-obarray-cache yari-ruby-obarray-cache)
     (let* ((methods (yari-ruby-methods-from-ri))
-           (classes (delete-dups (mapcar '(lambda (m)
-                                            (car (split-string m "#\\|::")))
-                                         methods))))
-      (setq yari-ruby-obarray-cache (append methods classes)))))
+           (classes '()))
+      (mapcar '(lambda (m)
+                 (setq classes (append classes
+                                       (yari-get-all-modules m))))
+              methods)
+      (setq yari-ruby-obarray-cache
+            (delete-dups (append methods classes))))))
+
+(defun yari-get-all-modules (name)
+  "Return class or module names for RDoc::RI::Driver#run or
+  RDoc::RI::Driver::new."
+  (let* ((case-fold-search . nil)
+         ;; remove class/object method if exists.
+         (module-name (car (split-string name "\\(::\\|#\\)[a-z]")))
+         (variants))
+    (while (not (string= "" module-name))
+      (add-to-list 'variants module-name)
+      (setq module-name
+            (if (string-match "\\(.*\\)::\\([^:]+\\)" module-name)
+		(match-string 1 module-name)
+              "")))
+    variants))
+
 
 (defun yari-ruby-methods-from-ri ()
   "Return list with all ruby methods known to ri command."
-  (delete ". not found, maybe you meant:"
-          (delete ""
-                  (split-string (shell-command-to-string "ri -T '.'") "\n"))))
+  (let* ((ri-version (cadr (split-string
+                            (shell-command-to-string "ri --version"))))
+         ;; 2.5.6, we need '5'
+         (ri-major-version (nth 1 (split-string ri-version "\\."))))
+    (cond ((equal ri-major-version "4")
+           ;; remove first to lines
+           (delq nil
+                 (mapcar '(lambda (name) (car (split-string name)))
+                         (cddr (split-string
+				(shell-command-to-string "ri -T") "\n")))))
+          (t
+           (delete-if '(lambda (name)
+                         (or (string= ". not found, maybe you meant:" name)
+                             (string= "" name)))
+                      (split-string (shell-command-to-string "ri -T '.'")
+                                    "\n"))))))
 
 ;;; Tests:
 
 (when (featurep 'ert)
+
+  (ert-deftest yari-test-get-module-name ()
+    (ert-should (equal '("Array")
+                       (yari-get-all-modules "Array::new")))
+    (ert-should (equal '("Array")
+                       (yari-get-all-modules "Array#size")))
+    (ert-should (equal '("RDoc" "RDoc::RI" "RDoc::RI::Driver")
+                       (yari-get-all-modules "RDoc::RI::Driver")))
+    (ert-should (equal '("RDoc" "RDoc::RI" "RDoc::RI::Driver")
+                       (yari-get-all-modules "RDoc::RI::Driver#run")))
+    (ert-should (equal '("RDoc" "RDoc::RI" "RDoc::RI::Driver")
+                       (yari-get-all-modules "RDoc::RI::Driver::new"))))
+
   (ert-deftest yari-test-ri-lookup-should-generate-error ()
     (ert-should-error
      (yari-ri-lookup "AbSoLuTttelyImposibleThisexists#bbb?")))
@@ -111,6 +156,10 @@
 
   (ert-deftest yari-test-ri-lookup ()
     (ert-should (yari-ri-lookup "Array")))
+
+  (ert-deftest yari-test-ruby-methods-from-ri-filter-standard-ruler ()
+    (ert-should-not (member "----------------------------------------------"
+                            (yari-ruby-methods-from-ri))))
 
   (ert-deftest yari-test-ruby-methods-from-ri-filter-standard-warning ()
     (ert-should-not (member ". not found, maybe you meant:"
@@ -134,14 +183,17 @@
       (yari-ruby-obarray)
       (ert-should yari-ruby-obarray-cache)))
 
-  (ert-deftest yari-test-ruby-obarray-for-class ()
-    (ert-should (member "Array" (yari-ruby-obarray))))
+  (ert-deftest yari-test-ruby-obarray-for-class-first-level ()
+    (ert-should (member "RDoc" (yari-ruby-obarray))))
+
+  (ert-deftest yari-test-ruby-obarray-for-class-deep-level ()
+    (ert-should (member "RDoc::RI::Driver" (yari-ruby-obarray))))
 
   (ert-deftest yari-test-ruby-obarray-for-class-method ()
-    (ert-should (member "Array::new" (yari-ruby-obarray))))
+    (ert-should (member "RDoc::RI::Driver::new" (yari-ruby-obarray))))
 
   (ert-deftest yari-test-ruby-obarray-for-object-method ()
-    (ert-should (member "Array#size" (yari-ruby-obarray))))
+    (ert-should (member "RDoc::RI::Driver#parse_name" (yari-ruby-obarray))))
 
   (defmacro yari-with-ruby-obarray-cache-mock (cache-mock &rest body)
     (declare (indent 1))
