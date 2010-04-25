@@ -25,7 +25,9 @@ end
 
 def run string
   puts "\n#{string}"
-  `rvm gemset list | egrep '^rdoc'`.split.sort.reverse.each do |gemset|
+  rdoc_gemsets = `rvm gemset list | egrep '^rdoc'`
+  # rdoc_gemsets = 'rdoc2.5.6'
+  rdoc_gemsets.split.sort.reverse.each do |gemset|
     system <<-SHELL || break
 #{ENV['SHELL']} -c "rvm gemset use #{gemset} && ri --version && #{string}"
 SHELL
