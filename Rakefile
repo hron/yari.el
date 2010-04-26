@@ -1,5 +1,11 @@
-require 'pp'
-require 'ruby-debug'
+require 'tempfile'
+
+RUBY_FOR_RDOC = {
+  '2.1.0' => '1.8.7',
+  '2.0.0' => '1.8.7',
+  '1.0.0' => '1.8.7'
+}
+RUBY_FOR_RDOC.default = '1.9.2-head'
 
 namespace :gemsets do
   task :prepare do
@@ -13,17 +19,69 @@ namespace :gemsets do
     end
 
     ENV['VERSIONS'].split(/, /).each do |version|
-      puts "Preparing gemset for #{version}..."
-      system <<-SHELL
-#{ENV['SHELL']} -c "rvm gemset create rdoc#{version} && rvm gemset use rdoc#{version} && gem install --verbose --version=#{version} rdoc"
-SHELL
+      ruby_version = RUBY_FOR_RDOC[version]
+      bash "rvm #{ruby_version} &&                \
+              rvm gemset create rdoc#{version} && \
+              rvm gemset use rdoc#{version} &&    \
+              gem install --verbose --version=#{version} rdoc"
     end
   end
 
   task :cleanup do
-    `rvm gemset list | egrep '^rdoc'`.split.each do |gemset|
-      system "rvm --force gemset delete #{gemset}"
+    [ '1.9.2-head', '1.8.7' ].each do |ruby_version|
+      cmd = "rvm #{ruby_version} && rvm gemset list | egrep '^rdoc'"
+      output_for(cmd).each do |gemset|
+        bash "rvm #{ruby_version} && rvm --force gemset delete #{gemset}"
+      end
     end
   end
 
+end
+
+desc "Test yari for ri VERSIONS=x,x,x."
+task :test do
+  versions = []
+  if ENV['VERSIONS']
+    versions = ENV['VERSIONS'].split /,/
+  else
+    [ '1.9.2-head', '1.8.7' ].each do |ruby_version|
+      output_for("rvm #{ruby_version} && rvm gemset list").each do |gemset|
+        next unless gemset =~ /rdoc(.*)/
+        versions << $1
+      end
+    end
+  end
+  versions.sort.reverse.each do |v|
+    bash "rvm #{RUBY_FOR_RDOC[v]} && rvm gemset use rdoc#{v} && #{yari_tests}"
+  end
+end
+
+def yari_tests
+  "emacs -Q --script #{lisp_test_file.path}"
+end
+
+def lisp_test_file
+  lisp_test = Tempfile.new('ri-tests-el')
+  lisp_test << <<-LISP
+(mapc '(lambda (path)
+         (add-to-list 'load-path (expand-file-name path)))
+      '("." "./vendor"))
+(require 'ert)
+(load "yari.el")
+(let ((stats (ert-run-tests-batch "^yari-")))
+  (kill-emacs (+ (ert-stats-passed-unexpected stats)
+                 (ert-stats-failed-unexpected stats)
+                 (ert-stats-error-unexpected stats))))
+LISP
+  lisp_test.close
+  lisp_test
+end
+
+def output_for string
+  IO.popen("#{ENV['SHELL']} -c '#{string}'").readlines
+end
+
+def bash string
+  puts string.gsub /[[:space:]]+/, ' '
+  system "#{ENV['SHELL']} -c '#{string}'"
 end
