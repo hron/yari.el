@@ -192,8 +192,7 @@
                            cache  = RDoc::RI::Cache.new(all_paths); \
                            reader = RDoc::RI::Reader.new(cache);    \
                            puts reader.all_names"))
-           (split-string (shell-command-to-string
-                          (format "ruby -e\"%s\"" ruby-code)))))))
+           (split-string (yari-eval-ruby-code ruby-code))))))
 
 
 (when-ert-loaded
@@ -218,8 +217,7 @@
                                classes << store.modules;     \
                              end;                            \
                              puts classes.flatten.uniq"))
-             (split-string (shell-command-to-string
-                            (format "ruby -rrubygems -e\"%s\"" ruby-code)))))
+             (split-string (yari-eval-ruby-code ruby-code))))
           (t
            (delq nil
                  (mapcar '(lambda (name) (car (split-string name)))
@@ -230,6 +228,10 @@
  (ert-deftest yari-test-ruby-classes-from-ri ()
    (yari-with-ruby-obarray-cache-mock cache-mock
      (ert-should (member "RDoc" (yari-ruby-classes-from-ri))))))
+
+(defun yari-eval-ruby-code (ruby-code)
+  "Return stdout from ruby -rrubyges -eRUBY-CODE."
+  (shell-command-to-string (format "ruby -rrubygems -e\"%s\"" ruby-code)))
 
 (defun yari-get-ri-version ()
   "Return list of version parts or RI."
