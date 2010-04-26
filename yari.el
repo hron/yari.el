@@ -108,8 +108,7 @@
     (yari-ri-lookup "AbSoLuTttelyImposibleThisexists#bbb?")))
 
  (ert-deftest yari-test-ri-lookup-should-have-content ()
-   (ert-should (string-match "RDoc - Ruby Documentation System"
-                             (yari-ri-lookup "RDoc"))))
+   (ert-should (string-match "RDoc" (yari-ri-lookup "RDoc"))))
 
  (ert-deftest yari-test-ri-lookup ()
    (ert-should (yari-ri-lookup "RDoc"))))
@@ -148,13 +147,13 @@
    (ert-should (member "RDoc" (yari-ruby-obarray))))
 
  (ert-deftest yari-test-ruby-obarray-for-class-deep-level ()
-   (ert-should (member "RDoc::RI::Driver" (yari-ruby-obarray))))
+   (ert-should (member "RDoc::TopLevel" (yari-ruby-obarray))))
 
  (ert-deftest yari-test-ruby-obarray-for-class-method ()
-   (ert-should (member "RDoc::RI::Driver::new" (yari-ruby-obarray))))
+   (ert-should (member "RDoc::TopLevel::new" (yari-ruby-obarray))))
 
  (ert-deftest yari-test-ruby-obarray-for-object-method ()
-   (ert-should (member "RDoc::RI::Driver#parse_name" (yari-ruby-obarray)))))
+   (ert-should (member "RDoc::TopLevel#full_name" (yari-ruby-obarray)))))
 
 
 (defun yari-get-all-modules (name)
@@ -192,9 +191,8 @@
          (delete-if '(lambda (name)
                          (or (string= ". not found, maybe you meant:" name)
                              (string= "" name)))
-                      (split-string (shell-command-to-string "ri -T '.'")
-                                    "\n")))
-	(t
+                      (split-string (shell-command-to-string "ri -T '.'") "\n")))
+	((yari-ri-version-at-least "2.2.0")
          (let ((ruby-code "require 'rdoc/ri/reader'; \
                            require 'rdoc/ri/cache';  \
                            require 'rdoc/ri/paths';  \
@@ -202,7 +200,11 @@
                            cache  = RDoc::RI::Cache.new(all_paths); \
                            reader = RDoc::RI::Reader.new(cache);    \
                            puts reader.all_names"))
-           (split-string (yari-eval-ruby-code ruby-code))))))
+           (split-string (yari-eval-ruby-code ruby-code))))
+	(t
+         (delete-if '(lambda (name) (string= "" name))
+                    (split-string
+                     (shell-command-to-string "ri -T --list-names") "\n")))))
 
 
 (when-ert-loaded
@@ -228,25 +230,41 @@
                              end;                            \
                              puts classes.flatten.uniq"))
              (split-string (yari-eval-ruby-code ruby-code))))
-          (t
-           (delq nil
-                 (mapcar '(lambda (name) (car (split-string name)))
-                         (cddr (split-string
-				(shell-command-to-string "ri -T") "[ \n,]+")))))))
+          ((yari-ri-version-at-least "2.2.0")
+           (mapcar '(lambda (line)
+                      (replace-regexp-in-string "^[[:space:]]+" "" line))
+                   (delete-if '(lambda (line)
+                                 (or (string-match "^[[:space:]]+$" line)
+                                     (string-match "--------------" line)))
+                              (split-string
+                               (shell-command-to-string "ri -T") "[\n,]+"))))
+          ;; ri v1.0.1 has --list-names which includes classes too.
+          (t '())))
 
 (when-ert-loaded
+ ;; we should skip this test on ri v1.0.1 somehow.
  (ert-deftest yari-test-ruby-classes-from-ri ()
-   (yari-with-ruby-obarray-cache-mock cache-mock
-     (ert-should (member "RDoc" (yari-ruby-classes-from-ri))))))
+   (unless (equal "1.0.1" (yari-get-ri-version))
+     (yari-with-ruby-obarray-cache-mock cache-mock
+       (ert-should (member "RDoc" (yari-ruby-classes-from-ri)))))))
 
 (defun yari-eval-ruby-code (ruby-code)
   "Return stdout from ruby -rrubyges -eRUBY-CODE."
   (shell-command-to-string (format "ruby -rrubygems -e\"%s\"" ruby-code)))
 
-(defun yari-get-ri-version ()
+(defun yari-get-ri-version (&optional version)
   "Return list of version parts or RI."
-  (cadr (split-string
-         (shell-command-to-string "ri --version"))))
+  (let* ((raw-version-output (or version
+                                 (shell-command-to-string "ri --version")))
+         (raw-version (cadr (split-string raw-version-output))))
+    (string-match "v?\\(.*\\)" raw-version)
+    (match-string 1 raw-version)))
+
+(when-ert-loaded
+ (ert-deftest yari-test-get-ri-version-for-1.0.0 ()
+   (ert-should (equal "1.0.1" (yari-get-ri-version "ri v1.0.1 - 20041108"))))
+ (ert-deftest yari-test-get-ri-version-for-2.5.6 ()
+   (ert-should (equal "2.5.6" (yari-get-ri-version "ri 2.5.6")))))
 
 (defun yari-ri-version-at-least (minimum)
   "Detect if RI version at least MINIMUM."

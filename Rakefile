@@ -3,7 +3,7 @@ require 'tempfile'
 RUBY_FOR_RDOC = {
   '2.1.0' => '1.8.7',
   '2.0.0' => '1.8.7',
-  '1.0.0' => '1.8.7'
+  '1.0.0' => 'system'
 }
 RUBY_FOR_RDOC.default = '1.9.2-head'
 
@@ -40,7 +40,7 @@ end
 
 desc "Test yari for ri VERSIONS=x,x,x."
 task :test do
-  versions = []
+  versions = [ '1.0.0' ]
   if ENV['VERSIONS']
     versions = ENV['VERSIONS'].split /,/
   else
@@ -52,7 +52,14 @@ task :test do
     end
   end
   versions.sort.reverse.each do |v|
-    bash "rvm #{RUBY_FOR_RDOC[v]} && rvm gemset use rdoc#{v} && #{yari_tests}"
+    # special case: ri 1.0.0
+    # if v == '1.0.0'
+    #   bash "rvm system && ri --version && #{yari_tests}"
+    # else
+      ruby_version = RUBY_FOR_RDOC[v]
+      next unless ruby_version
+      bash "rvm #{ruby_version} && rvm gemset use rdoc#{v} && #{yari_tests}"
+    # end
     exit if $?.exitstatus != 0
   end
 end
