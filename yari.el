@@ -40,7 +40,10 @@
   "Look up Ruby documentation."
   (interactive (list nil current-prefix-arg))
   (setq ri-topic (or ri-topic (completing-read "yari: "
-                                               (yari-ruby-obarray rehash))))
+                                               (yari-ruby-obarray rehash)
+                                               nil
+                                               t
+                                               (yari-symbol-at-point))))
   (let ((yari-buffer-name (format "*yari %s*" ri-topic)))
     (unless (get-buffer yari-buffer-name)
       (let ((yari-buffer (get-buffer-create yari-buffer-name))
@@ -53,6 +56,13 @@
           (goto-char (point-min))
           (yari-mode))))
     (display-buffer yari-buffer-name)))
+
+(defun yari-symbol-at-point ()
+  ;; TODO: make this smart about class/module at point
+  (let ((yari-symbol (symbol-at-point)))
+    (if yari-symbol
+        (symbol-name yari-symbol)
+      "")))
 
 (defun yari-mode ()
   "Mode for viewing Ruby documentation."
@@ -242,7 +252,6 @@
   "Detect if RI version at least MINIMUM."
   (let ((ri-version (yari-get-ri-version)))
     (or (string< minimum ri-version) (string= minimum ri-version))))
-
 
 (provide 'yari)
 ;;; yari.el ends here
