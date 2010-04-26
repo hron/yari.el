@@ -219,7 +219,7 @@
                              end;                            \
                              puts classes.flatten.uniq"))
              (split-string (shell-command-to-string
-                            (format "ruby -e\"%s\"" ruby-code)))))
+                            (format "ruby -rrubygems -e\"%s\"" ruby-code)))))
           (t
            (delq nil
                  (mapcar '(lambda (name) (car (split-string name)))
