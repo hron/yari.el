@@ -53,6 +53,7 @@ task :test do
   end
   versions.sort.reverse.each do |v|
     bash "rvm #{RUBY_FOR_RDOC[v]} && rvm gemset use rdoc#{v} && #{yari_tests}"
+    exit if $?.exitstatus != 0
   end
 end
 
