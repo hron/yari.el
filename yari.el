@@ -25,6 +25,7 @@
 ;;; Code:
 
 (require 'thingatpt)
+(require 'ansi-color)
 
 (defgroup yari nil
   "Yet Another Ri Interface."
