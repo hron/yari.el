@@ -39,11 +39,16 @@
 (defun yari (&optional ri-topic rehash)
   "Look up Ruby documentation."
   (interactive (list nil current-prefix-arg))
-  (setq ri-topic (or ri-topic (completing-read "yari: "
-                                               (yari-ruby-obarray rehash)
-                                               nil
-                                               t
-                                               (yari-symbol-at-point))))
+  (let ((completing-read-func (if (null ido-mode)
+				  'completing-read
+				'ido-completing-read)))
+    (setq ri-topic (or ri-topic
+		       (funcall completing-read-func
+				"yari: "
+				(yari-ruby-obarray rehash)
+				nil
+				t
+				(yari-symbol-at-point)))))
   (let ((yari-buffer-name (format "*yari %s*" ri-topic)))
     (unless (get-buffer yari-buffer-name)
       (let ((yari-buffer (get-buffer-create yari-buffer-name))
