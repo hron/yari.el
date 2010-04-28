@@ -130,13 +130,13 @@
 (when-ert-loaded
  (ert-deftest yari-test-ruby-obarray-should-rehash ()
    (yari-with-ruby-obarray-cache-mock cache-mock
-     (yari-ruby-obarray t)
-     (ert-should-not (equal yari-ruby-obarray-cache cache-mock))))
+                                      (yari-ruby-obarray t)
+                                      (ert-should-not (equal yari-ruby-obarray-cache cache-mock))))
 
  (ert-deftest yari-test-ruby-obarray-should-use-cache ()
    (yari-with-ruby-obarray-cache-mock cache-mock
-     (yari-ruby-obarray)
-     (ert-should (equal yari-ruby-obarray-cache cache-mock))))
+                                      (yari-ruby-obarray)
+                                      (ert-should (equal yari-ruby-obarray-cache cache-mock))))
 
  (ert-deftest yari-test-ruby-obarray-should-set-cache ()
    (let ((yari-ruby-obarray-cache))
@@ -153,7 +153,26 @@
    (ert-should (member "RDoc::TopLevel::new" (yari-ruby-obarray))))
 
  (ert-deftest yari-test-ruby-obarray-for-object-method ()
-   (ert-should (member "RDoc::TopLevel#full_name" (yari-ruby-obarray)))))
+   (ert-should (member "RDoc::TopLevel#full_name" (yari-ruby-obarray))))
+
+ (ert-deftest yari-test-ruby-obarray-filter-standard-warning ()
+   (ert-should-not (member ". not found, maybe you meant:"
+                           (yari-ruby-obarray))))
+
+ (ert-deftest yari-test-ruby-obarray-filter-updating-class-cache ()
+   (ert-should-not (let ((bad-thing-found-p))
+                     (mapc '(lambda (line)
+                              (when (string-match "Updating class cache" line)
+				(setq bad-thing-found-p t)))
+                           (yari-ruby-obarray))
+                     bad-thing-found-p)))
+
+ (ert-deftest yari-test-ruby-obarray-filter-empty-string ()
+   (ert-should-not (member "" (yari-ruby-obarray))))
+
+ (ert-deftest yari-test-ruby-obarray-filter-standard-ruler ()
+   (ert-should-not (member "----------------------------------------------"
+                           (yari-ruby-obarray)))))
 
 
 (defun yari-get-all-modules (name)
@@ -188,10 +207,8 @@
 (defun yari-ruby-methods-from-ri ()
   "Return list with all ruby methods known to ri command."
   (cond ((yari-ri-version-at-least "2.5")
-         (delete-if '(lambda (name)
-                         (or (string= ". not found, maybe you meant:" name)
-                             (string= "" name)))
-                      (split-string (shell-command-to-string "ri -T '.'") "\n")))
+         (yari-ruby-filter-ri-output-for-interactive-messages
+          (split-string (shell-command-to-string "ri -T '.'") "\n")))
 	((yari-ri-version-at-least "2.2.0")
          (let ((ruby-code "require 'rdoc/ri/reader'; \
                            require 'rdoc/ri/cache';  \
@@ -201,56 +218,64 @@
                            reader = RDoc::RI::Reader.new(cache);    \
                            puts reader.all_names"))
            (split-string (yari-eval-ruby-code ruby-code))))
+	((yari-ri-version-at-least "2.0.0")
+         (let ((ruby-code "require 'rdoc/ri/driver';            \
+                           driver  = RDoc::RI::Driver.new;      \
+                           methods = driver.select_methods(//); \
+                           puts methods.map{|m| m['full_name']}"))
+           (split-string (yari-eval-ruby-code ruby-code))))
 	(t
-         (delete-if '(lambda (name) (string= "" name))
-                    (split-string
-                     (shell-command-to-string "ri -T --list-names") "\n")))))
+         (yari-ruby-filter-ri-output-for-interactive-messages
+          (split-string
+           (shell-command-to-string "ri -T --list-names") "[\n,]+")))))
 
-
-(when-ert-loaded
- (ert-deftest yari-test-ruby-methods-from-ri-filter-standard-warning ()
-   (ert-should-not (member ". not found, maybe you meant:"
-                           (yari-ruby-methods-from-ri))))
-
- (ert-deftest yari-test-ruby-methods-from-ri-filter-empty-string ()
-   (ert-should-not (member "" (yari-ruby-methods-from-ri))))
-
- (ert-deftest yari-test-ruby-methods-from-ri-filter-standard-ruler ()
-   (ert-should-not (member "----------------------------------------------"
-                           (yari-ruby-methods-from-ri)))))
 
 (defun yari-ruby-classes-from-ri ()
   "Return list with all ruby classes/modules know to ri command."
-    (cond ((yari-ri-version-at-least "2.5")
-           (let ((ruby-code "require 'rdoc/ri/driver';       \
+  (cond ((yari-ri-version-at-least "2.5")
+         (let ((ruby-code "require 'rdoc/ri/driver';       \
                              driver  = RDoc::RI::Driver.new; \
                              classes = [];                   \
                              driver.stores.each do |store|   \
                                classes << store.modules;     \
                              end;                            \
                              puts classes.flatten.uniq"))
-             (split-string (yari-eval-ruby-code ruby-code))))
-          ((yari-ri-version-at-least "2.2.0")
-           (mapcar '(lambda (line)
-                      (replace-regexp-in-string "^[[:space:]]+" "" line))
-                   (delete-if '(lambda (line)
-                                 (or (string-match "^[[:space:]]+$" line)
-                                     (string-match "--------------" line)))
-                              (split-string
-                               (shell-command-to-string "ri -T") "[\n,]+"))))
-          ;; ri v1.0.1 has --list-names which includes classes too.
-          (t '())))
+           (split-string (yari-eval-ruby-code ruby-code))))
+	((yari-ri-version-at-least "2.0.0")
+         (yari-ruby-filter-ri-output-for-interactive-messages
+          (split-string (shell-command-to-string "ri -T") "[\n,]+")))
+	;; ri v1.0.1 has --list-names which includes classes too.
+	(t '())))
+
+(defun yari-ruby-filter-ri-output-for-interactive-messages (lines)
+  "Filter LINES for things like ---------, 'Updating class cache' and etc"
+  (mapcar '(lambda (line)
+             (replace-regexp-in-string "^[[:space:]]+" "" line))
+          (delete-if '(lambda (line)
+			(or (string= "" line)
+                            (string= ". not found, maybe you meant:" line)
+                            (string-match "Updating class cache" line)
+                            (string-match "^[[:space:]]+$" line)
+                            (string-match "--------------" line)))
+                     lines)))
 
 (when-ert-loaded
  ;; we should skip this test on ri v1.0.1 somehow.
  (ert-deftest yari-test-ruby-classes-from-ri ()
-   (unless (equal "1.0.1" (yari-get-ri-version))
-     (yari-with-ruby-obarray-cache-mock cache-mock
-       (ert-should (member "RDoc" (yari-ruby-classes-from-ri)))))))
+   (when (yari-ri-version-at-least "2.2.0")
+     (yari-with-ruby-obarray-cache-mock
+      cache-mock
+      (ert-should (member "RDoc" (yari-ruby-classes-from-ri)))))))
 
 (defun yari-eval-ruby-code (ruby-code)
   "Return stdout from ruby -rrubyges -eRUBY-CODE."
   (shell-command-to-string (format "ruby -rrubygems -e\"%s\"" ruby-code)))
+
+
+(defun yari-ri-version-at-least (minimum)
+  "Detect if RI version at least MINIMUM."
+  (let ((ri-version (yari-get-ri-version)))
+    (or (string< minimum ri-version) (string= minimum ri-version))))
 
 (defun yari-get-ri-version (&optional version)
   "Return list of version parts or RI."
@@ -266,10 +291,6 @@
  (ert-deftest yari-test-get-ri-version-for-2.5.6 ()
    (ert-should (equal "2.5.6" (yari-get-ri-version "ri 2.5.6")))))
 
-(defun yari-ri-version-at-least (minimum)
-  "Detect if RI version at least MINIMUM."
-  (let ((ri-version (yari-get-ri-version)))
-    (or (string< minimum ri-version) (string= minimum ri-version))))
 
 (provide 'yari)
 ;;; yari.el ends here

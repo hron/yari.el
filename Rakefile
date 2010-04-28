@@ -18,6 +18,7 @@ namespace :gemsets do
       ENV['VERSIONS'] = $1
     end
 
+
     ENV['VERSIONS'].split(/, /).each do |version|
       ruby_version = RUBY_FOR_RDOC[version]
       bash "rvm #{ruby_version} &&                \
@@ -51,15 +52,13 @@ task :test do
       end
     end
   end
+
   versions.sort.reverse.each do |v|
-    # special case: ri 1.0.0
-    # if v == '1.0.0'
-    #   bash "rvm system && ri --version && #{yari_tests}"
-    # else
-      ruby_version = RUBY_FOR_RDOC[v]
-      next unless ruby_version
-      bash "rvm #{ruby_version} && rvm gemset use rdoc#{v} && #{yari_tests}"
-    # end
+    ruby_version = RUBY_FOR_RDOC[v]
+    next unless ruby_version
+
+    bash "rm #{ENV['HOME']}/.ri/cache/classes"
+    bash "rvm #{ruby_version} && rvm gemset use rdoc#{v} && #{yari_tests}"
     exit if $?.exitstatus != 0
   end
 end
