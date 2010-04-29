@@ -41,10 +41,10 @@
   "Look up Ruby documentation."
   (interactive (list nil current-prefix-arg))
   (let ((completing-read-func (if (null ido-mode)
-				  'completing-read
+                                  'completing-read
 				'ido-completing-read)))
     (setq ri-topic (or ri-topic
-		       (funcall completing-read-func
+                       (funcall completing-read-func
 				"yari: "
 				(yari-ruby-obarray rehash)
 				nil
@@ -181,40 +181,14 @@
                            (yari-ruby-obarray)))))
 
 
-(defun yari-get-all-modules (name)
-  "Return class or module names for RDoc::RI::Driver#run or
-  RDoc::RI::Driver::new."
-  (let* ((case-fold-search . nil)
-         ;; remove class/object method if exists.
-         (module-name (car (split-string name "\\(::\\|#\\)[a-z]")))
-         (variants))
-    (while (not (string= "" module-name))
-      (add-to-list 'variants module-name)
-      (setq module-name
-            (if (string-match "\\(.*\\)::\\([^:]+\\)" module-name)
-		(match-string 1 module-name)
-              "")))
-    variants))
-
-(when-ert-loaded
- (ert-deftest yari-test-get-all-modules ()
-   (ert-should (equal '("Array")
-                      (yari-get-all-modules "Array::new")))
-   (ert-should (equal '("Array")
-                      (yari-get-all-modules "Array#size")))
-   (ert-should (equal '("RDoc" "RDoc::RI" "RDoc::RI::Driver")
-                      (yari-get-all-modules "RDoc::RI::Driver")))
-   (ert-should (equal '("RDoc" "RDoc::RI" "RDoc::RI::Driver")
-                      (yari-get-all-modules "RDoc::RI::Driver#run")))
-   (ert-should (equal '("RDoc" "RDoc::RI" "RDoc::RI::Driver")
-                      (yari-get-all-modules "RDoc::RI::Driver::new")))))
-
-
 (defun yari-ruby-methods-from-ri ()
   "Return list with all ruby methods known to ri command."
   (cond ((yari-ri-version-at-least "2.5")
-         (yari-ruby-filter-ri-output-for-interactive-messages
-          (split-string (shell-command-to-string "ri -T '.'") "\n")))
+         (let ((ruby-code "require 'rdoc/ri/driver';       \
+                           driver  = RDoc::RI::Driver.new; \
+                           puts driver.list_known_classes; \
+                           puts driver.list_methods_matching('.')"))
+           (split-string (yari-eval-ruby-code ruby-code))))
 	((yari-ri-version-at-least "2.2.0")
          (let ((ruby-code "require 'rdoc/ri/reader'; \
                            require 'rdoc/ri/cache';  \
@@ -239,14 +213,7 @@
 (defun yari-ruby-classes-from-ri ()
   "Return list with all ruby classes/modules know to ri command."
   (cond ((yari-ri-version-at-least "2.5")
-         (let ((ruby-code "require 'rdoc/ri/driver';       \
-                             driver  = RDoc::RI::Driver.new; \
-                             classes = [];                   \
-                             driver.stores.each do |store|   \
-                               classes << store.modules;     \
-                             end;                            \
-                             puts classes.flatten.uniq"))
-           (split-string (yari-eval-ruby-code ruby-code))))
+         '())
 	((yari-ri-version-at-least "2.0.0")
          (yari-ruby-filter-ri-output-for-interactive-messages
           (split-string (shell-command-to-string "ri -T") "[\n,]+")))
@@ -265,18 +232,9 @@
                             (string-match "--------------" line)))
                      lines)))
 
-(when-ert-loaded
- ;; we should skip this test on ri v1.0.1 somehow.
- (ert-deftest yari-test-ruby-classes-from-ri ()
-   (when (yari-ri-version-at-least "2.2.0")
-     (yari-with-ruby-obarray-cache-mock
-      cache-mock
-      (ert-should (member "RDoc" (yari-ruby-classes-from-ri)))))))
-
 (defun yari-eval-ruby-code (ruby-code)
   "Return stdout from ruby -rrubyges -eRUBY-CODE."
   (shell-command-to-string (format "ruby -rrubygems -e\"%s\"" ruby-code)))
-
 
 (defun yari-ri-version-at-least (minimum)
   "Detect if RI version at least MINIMUM."
