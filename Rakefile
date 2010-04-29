@@ -8,6 +8,7 @@ RUBY_FOR_RDOC = {
 RUBY_FOR_RDOC.default = '1.9.2-head'
 
 namespace :gemsets do
+  desc "Prepare gemsets with different versions of RDoc."
   task :prepare do
     unless ENV['VERSIONS']
       puts "Fetching the list of rdoc's versions..."
@@ -28,6 +29,7 @@ namespace :gemsets do
     end
   end
 
+  desc "Remove all gemsets created for testing against different versions of RDoc."
   task :cleanup do
     [ '1.9.2-head', '1.8.7' ].each do |ruby_version|
       cmd = "rvm #{ruby_version} && rvm gemset list | egrep '^rdoc'"
