@@ -128,21 +128,20 @@
   (if (and (null rehash) (consp yari-ruby-obarray-cache))
       ;; TODO: I do not know how to return from here properly... ;]
       (setq yari-ruby-obarray-cache yari-ruby-obarray-cache)
-    (let* ((methods (yari-ruby-methods-from-ri))
-           (classes (yari-ruby-classes-from-ri)))
-      (setq yari-ruby-obarray-cache
-            (delete-dups (append methods classes))))))
+    (setq yari-ruby-obarray-cache (yari-ruby-methods-from-ri))))
 
 (when-ert-loaded
  (ert-deftest yari-test-ruby-obarray-should-rehash ()
-   (yari-with-ruby-obarray-cache-mock cache-mock
-                                      (yari-ruby-obarray t)
-                                      (ert-should-not (equal yari-ruby-obarray-cache cache-mock))))
+   (yari-with-ruby-obarray-cache-mock
+    cache-mock
+    (yari-ruby-obarray t)
+    (ert-should-not (equal yari-ruby-obarray-cache cache-mock))))
 
  (ert-deftest yari-test-ruby-obarray-should-use-cache ()
-   (yari-with-ruby-obarray-cache-mock cache-mock
-                                      (yari-ruby-obarray)
-                                      (ert-should (equal yari-ruby-obarray-cache cache-mock))))
+   (yari-with-ruby-obarray-cache-mock
+    cache-mock
+    (yari-ruby-obarray)
+    (ert-should (equal yari-ruby-obarray-cache cache-mock))))
 
  (ert-deftest yari-test-ruby-obarray-should-set-cache ()
    (let ((yari-ruby-obarray-cache))
@@ -159,26 +158,7 @@
    (ert-should (member "RDoc::TopLevel::new" (yari-ruby-obarray))))
 
  (ert-deftest yari-test-ruby-obarray-for-object-method ()
-   (ert-should (member "RDoc::TopLevel#full_name" (yari-ruby-obarray))))
-
- (ert-deftest yari-test-ruby-obarray-filter-standard-warning ()
-   (ert-should-not (member ". not found, maybe you meant:"
-                           (yari-ruby-obarray))))
-
- (ert-deftest yari-test-ruby-obarray-filter-updating-class-cache ()
-   (ert-should-not (let ((bad-thing-found-p))
-                     (mapc '(lambda (line)
-                              (when (string-match "Updating class cache" line)
-				(setq bad-thing-found-p t)))
-                           (yari-ruby-obarray))
-                     bad-thing-found-p)))
-
- (ert-deftest yari-test-ruby-obarray-filter-empty-string ()
-   (ert-should-not (member "" (yari-ruby-obarray))))
-
- (ert-deftest yari-test-ruby-obarray-filter-standard-ruler ()
-   (ert-should-not (member "----------------------------------------------"
-                           (yari-ruby-obarray)))))
+   (ert-should (member "RDoc::TopLevel#full_name" (yari-ruby-obarray)))))
 
 
 (defun yari-ruby-methods-from-ri ()
@@ -205,38 +185,42 @@
                            methods = driver.select_methods(//); \
                            puts methods.map{|m| m['full_name']}"))
            (split-string (yari-eval-ruby-code ruby-code))))
+	((yari-ri-version-at-least "1.0.0")
+	 (let ((ruby-code "require 'rdoc/ri/ri_reader'; \
+                           require 'rdoc/ri/ri_cache';  \
+                           require 'rdoc/ri/ri_paths'; \
+                           all_paths = RI::Paths.path(true,true,true,true); \
+                           cache = RI::RiCache.new(all_paths); \
+                           reader = RI::RiReader.new(cache);    \
+                           puts reader.all_names;"))
+	   (split-string (yari-eval-ruby-code ruby-code))))
 	(t
-         (yari-ruby-filter-ri-output-for-interactive-messages
-          (split-string
-           (shell-command-to-string "ri -T --list-names") "[\n,]+")))))
-
-
-(defun yari-ruby-classes-from-ri ()
-  "Return list with all ruby classes/modules know to ri command."
-  (cond ((yari-ri-version-at-least "2.5")
-         '())
-	((yari-ri-version-at-least "2.2.0")
-	 '())
-	((yari-ri-version-at-least "2.0.0")
-	 '())
-	;; ri v1.0.1 has --list-names which includes classes too.
-	(t '())))
-
-(defun yari-ruby-filter-ri-output-for-interactive-messages (lines)
-  "Filter LINES for things like ---------, 'Updating class cache' and etc"
-  (mapcar '(lambda (line)
-             (replace-regexp-in-string "^[[:space:]]+" "" line))
-          (delete-if '(lambda (line)
-			(or (string= "" line)
-                            (string= ". not found, maybe you meant:" line)
-                            (string-match "Updating class cache" line)
-                            (string-match "^[[:space:]]+$" line)
-                            (string-match "--------------" line)))
-                     lines)))
+	 (error "Unknown Ri version."))))
 
 (defun yari-eval-ruby-code (ruby-code)
   "Return stdout from ruby -rrubyges -eRUBY-CODE."
   (shell-command-to-string (format "ruby -rrubygems -e\"%s\"" ruby-code)))
+
+(when-ert-loaded
+ (ert-deftest yari-test-ruby-obarray-filter-standard-warning ()
+   (ert-should-not (member ". not found, maybe you meant:"
+                           (yari-ruby-obarray))))
+
+ (ert-deftest yari-test-ruby-obarray-filter-updating-class-cache ()
+   (ert-should-not (let ((case-fold-search nil)
+			 (bad-thing-found-p))
+                     (mapc '(lambda (line)
+                              (when (string-match "Updating class cache" line)
+				(setq bad-thing-found-p t)))
+                           (yari-ruby-obarray))
+                     bad-thing-found-p)))
+
+ (ert-deftest yari-test-ruby-obarray-filter-empty-string ()
+   (ert-should-not (member "" (yari-ruby-obarray))))
+
+ (ert-deftest yari-test-ruby-obarray-filter-standard-ruler ()
+   (ert-should-not (member "----------------------------------------------"
+                           (yari-ruby-obarray)))))
 
 (defun yari-ri-version-at-least (minimum)
   "Detect if RI version at least MINIMUM."
