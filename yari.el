@@ -214,6 +214,8 @@
   "Return list with all ruby classes/modules know to ri command."
   (cond ((yari-ri-version-at-least "2.5")
          '())
+	((yari-ri-version-at-least "2.2.0")
+	 '())
 	((yari-ri-version-at-least "2.0.0")
          (yari-ruby-filter-ri-output-for-interactive-messages
           (split-string (shell-command-to-string "ri -T") "[\n,]+")))
