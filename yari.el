@@ -1,9 +1,12 @@
-;;; yari.el --- Yet Another RI interface for Emacs.
+;;; yari.el --- Yet Another RI interface for Emacs
 
 ;; Copyright (C) 2010  Aleksei Gusev
 
 ;; Author: Aleksei Gusev <aleksei.gusev@gmail.com>
-;; Keywords: help
+;; Maintainer: Aleksei Gusev <aleksei.gusev@gmail.com>
+;; Created: 24 Apr 2010
+;; Version: 0.2
+;; Keywords: tools
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -20,7 +23,25 @@
 
 ;;; Commentary:
 
+;; yari.el provides an Emacs frontend to Ruby's `ri' documentation
+;; tool. It offers lookup and completion.
 ;;
+;; This version will load all completion targets the first time it's
+;; invoked. This can be a significant startup time, but it will not
+;; have to look up anything after that point.
+;;
+;; This library tries to by compatible with any version of `rdoc' gem.
+;; Self-testing covers all versions from 1.0.1 to 2.5.8 (current).
+;;
+;; The main function you should use as interface to ri is M-x yari. I
+;; recommend to bind it on some key local when you are ruby-mode. Here
+;; is the example:
+;;
+;; (defun ri-bind-key ()
+;;   (local-set-key [f1] 'yari))
+;; (add-hook 'ruby-mode-hook 'ri-bind-key)
+;;
+;; You can use C-u M-x yari to reload all completion targets.
 
 ;;; Code:
 
@@ -70,6 +91,14 @@
         (symbol-name yari-symbol)
       "")))
 
+(defvar yari-mode-map
+  (let ((map (make-keymap)))
+    (suppress-keymap map t)
+    (define-key map (kbd "q")    'quit-window)
+    (define-key map (kbd "SPC")  'scroll-up)
+    (define-key map (kbd "\C-?") 'scroll-down)
+    map))
+
 (defun yari-mode ()
   "Mode for viewing Ruby documentation."
   (buffer-disable-undo)
@@ -80,17 +109,10 @@
   (setq buffer-read-only t)
   (run-hooks 'yari-mode-hook))
 
-(defvar yari-mode-map
-  (let ((map (make-keymap)))
-    (suppress-keymap map t)
-    (define-key map (kbd "q")    'quit-window)
-    (define-key map (kbd "SPC")  'scroll-up)
-    (define-key map (kbd "\C-?") 'scroll-down)
-    map))
-
 (defmacro when-ert-loaded (&rest body)
-  `(when (featurep 'ert)
-     ,@body))
+  `(dont-compile
+     (when (featurep 'ert)
+       ,@body)))
 
 (when-ert-loaded
  (defmacro yari-with-ruby-obarray-cache-mock (cache-mock &rest body)
@@ -186,16 +208,16 @@
                            puts methods.map{|m| m['full_name']}"))
            (split-string (yari-eval-ruby-code ruby-code))))
 	((yari-ri-version-at-least "1.0.0")
-	 (let ((ruby-code "require 'rdoc/ri/ri_reader'; \
+         (let ((ruby-code "require 'rdoc/ri/ri_reader'; \
                            require 'rdoc/ri/ri_cache';  \
                            require 'rdoc/ri/ri_paths'; \
                            all_paths = RI::Paths.path(true,true,true,true); \
                            cache = RI::RiCache.new(all_paths); \
                            reader = RI::RiReader.new(cache);    \
                            puts reader.all_names;"))
-	   (split-string (yari-eval-ruby-code ruby-code))))
+           (split-string (yari-eval-ruby-code ruby-code))))
 	(t
-	 (error "Unknown Ri version."))))
+         (error "Unknown Ri version."))))
 
 (defun yari-eval-ruby-code (ruby-code)
   "Return stdout from ruby -rrubyges -eRUBY-CODE."
@@ -208,7 +230,7 @@
 
  (ert-deftest yari-test-ruby-obarray-filter-updating-class-cache ()
    (ert-should-not (let ((case-fold-search nil)
-			 (bad-thing-found-p))
+                         (bad-thing-found-p))
                      (mapc '(lambda (line)
                               (when (string-match "Updating class cache" line)
 				(setq bad-thing-found-p t)))
@@ -240,7 +262,6 @@
    (ert-should (equal "1.0.1" (yari-get-ri-version "ri v1.0.1 - 20041108"))))
  (ert-deftest yari-test-get-ri-version-for-2.5.6 ()
    (ert-should (equal "2.5.6" (yari-get-ri-version "ri 2.5.6")))))
-
 
 (provide 'yari)
 ;;; yari.el ends here
