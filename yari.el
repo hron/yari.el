@@ -201,6 +201,7 @@
 	((yari-ri-version-at-least "2.0.0")
          (let ((ruby-code "require 'rdoc/ri/driver';            \
                            driver  = RDoc::RI::Driver.new;      \
+                           puts driver.class_cache.keys;        \
                            methods = driver.select_methods(//); \
                            puts methods.map{|m| m['full_name']}"))
            (split-string (yari-eval-ruby-code ruby-code))))
@@ -217,8 +218,7 @@
 	((yari-ri-version-at-least "2.2.0")
 	 '())
 	((yari-ri-version-at-least "2.0.0")
-         (yari-ruby-filter-ri-output-for-interactive-messages
-          (split-string (shell-command-to-string "ri -T") "[\n,]+")))
+	 '())
 	;; ri v1.0.1 has --list-names which includes classes too.
 	(t '())))
 
