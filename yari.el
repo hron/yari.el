@@ -263,5 +263,18 @@
  (ert-deftest yari-test-get-ri-version-for-2.5.6 ()
    (ert-should (equal "2.5.6" (yari-get-ri-version "ri 2.5.6")))))
 
+(eval-after-load "anything"
+  '(progn
+
+     (defvar yari-anything-source-ri-pages
+       '((name . "RI documentation")
+	 (candidates . (lambda () (yari-ruby-obarray)))
+	 (requires-pattern . 2)
+	 "Source for completing RI documentation."))
+
+     (defun yari-anything ()
+       (interactive)
+       (anything 'yari-anything-source-ri-pages))))
+
 (provide 'yari)
 ;;; yari.el ends here
