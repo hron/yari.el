@@ -5,7 +5,7 @@
 ;; Author: Aleksei Gusev <aleksei.gusev@gmail.com>
 ;; Maintainer: Aleksei Gusev <aleksei.gusev@gmail.com>
 ;; Created: 24 Apr 2010
-;; Version: 0.2
+;; Version: 0.3
 ;; Keywords: tools
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -56,6 +56,19 @@
   "Hooks to run when invoking yari-mode."
   :group 'yari
   :type 'hook)
+
+(defvar yari-anything-source-ri-pages
+  '((name . "RI documentation")
+    (candidates . (lambda () (yari-ruby-obarray)))
+    (action  ("Show with Yari" . yari))
+    (requires-pattern . 2)
+    "Source for completing RI documentation."))
+
+;;;###autoload
+(defun yari-anything ()
+  (interactive)
+  (anything 'yari-anything-source-ri-pages))
+
 
 ;;;###autoload
 (defun yari (&optional ri-topic rehash)
@@ -262,20 +275,6 @@
    (ert-should (equal "1.0.1" (yari-get-ri-version "ri v1.0.1 - 20041108"))))
  (ert-deftest yari-test-get-ri-version-for-2.5.6 ()
    (ert-should (equal "2.5.6" (yari-get-ri-version "ri 2.5.6")))))
-
-(if (require 'anything nil t)
-    (progn
-      (defvar yari-anything-source-ri-pages
-	'((name . "RI documentation")
-	  (candidates . (lambda () (yari-ruby-obarray)))
-	  (action  ("Show with Yari" . yari))
-	  (requires-pattern . 2)
-	  "Source for completing RI documentation."))
-
-      ;;;###autoload
-      (defun yari-anything ()
-	(interactive)
-	(anything 'yari-anything-source-ri-pages))))
 
 (provide 'yari)
 ;;; yari.el ends here
