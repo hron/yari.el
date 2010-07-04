@@ -65,10 +65,10 @@
     "Source for completing RI documentation."))
 
 ;;;###autoload
-(defun yari-anything ()
-  (interactive)
-  (anything 'yari-anything-source-ri-pages))
-
+(defun yari-anything (&optional rehash)
+  (interactive (list current-prefix-arg))
+  (when current-prefix-arg (yari-ruby-obarray rehash))
+  (anything 'yari-anything-source-ri-pages (yari-symbol-at-point)))
 
 ;;;###autoload
 (defun yari (&optional ri-topic rehash)
