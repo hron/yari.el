@@ -67,6 +67,7 @@
   '((name . "RI documentation")
     (candidates . (lambda () (yari-ruby-obarray)))
     (action  ("Show with Yari" . yari))
+    (candidate-number-limit . 300)
     (requires-pattern . 2)
     "Source for completing RI documentation."))
 
