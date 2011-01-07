@@ -148,7 +148,7 @@
   (assert (member name (yari-ruby-obarray)) nil
           (format "%s is unknown symbol to RI." name))
   (shell-command-to-string
-   (format "ri -T %s" (shell-quote-argument name))))
+   (format "ri -T -f ansi %s" (shell-quote-argument name))))
 
 (when-ert-loaded
  (ert-deftest yari-test-ri-lookup-should-generate-error ()
