@@ -30,12 +30,12 @@
 ;; invoked. This can be a significant startup time, but it will not
 ;; have to look up anything after that point.
 ;;
-;; This library tries to by compatible with any version of `rdoc' gem.
+;; This library tries to be compatible with any version of `rdoc' gem.
 ;; Self-testing covers all versions from 1.0.1 to 2.5.8 (current).
 ;;
-;; The main function you should use as interface to ri is M-x yari. I
-;; recommend to bind it on some key local when you are ruby-mode. Here
-;; is the example:
+;; The main function you should use as interface to ri is M-x yari
+;; (yari-anything is a variant using Anything input framework). I recommend to
+;; bind it on some key local when you are ruby-mode. Here is the example:
 ;;
 ;; (defun ri-bind-key ()
 ;;   (local-set-key [f1] 'yari))
