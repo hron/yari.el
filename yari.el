@@ -1,11 +1,11 @@
 ;;; yari.el --- Yet Another RI interface for Emacs
 
-;; Copyright (C) 2010  Aleksei Gusev
+;; Copyright (C) 2010  Aleksei Gusev, Jose Pablo Barrantes
 
 ;; Author: Aleksei Gusev <aleksei.gusev@gmail.com>
 ;; Maintainer: Aleksei Gusev <aleksei.gusev@gmail.com>
 ;; Created: 24 Apr 2010
-;; Version: 0.3
+;; Version: 0.4
 ;; Keywords: tools
 
 ;; This program is free software; you can redistribute it and/or modify
