@@ -1,6 +1,6 @@
 ;;; yari.el --- Yet Another RI interface for Emacs
 
-;; Copyright (C) 2010  Aleksei Gusev, Jose Pablo Barrantes
+;; Copyright (C) 2010, 2011  Aleksei Gusev, Jose Pablo Barrantes, Perry Smith
 
 ;; Author: Aleksei Gusev <aleksei.gusev@gmail.com>
 ;; Maintainer: Aleksei Gusev <aleksei.gusev@gmail.com>
@@ -126,6 +126,7 @@
   (use-local-map yari-mode-map)
   (setq mode-name "yari")
   (setq major-mode 'yari-mode)
+  (yari-find-buttons)
   (setq buffer-read-only t)
   (run-hooks 'yari-mode-hook))
 
@@ -282,6 +283,155 @@
    (ert-should (equal "1.0.1" (yari-get-ri-version "ri v1.0.1 - 20041108"))))
  (ert-deftest yari-test-get-ri-version-for-2.5.6 ()
    (ert-should (equal "2.5.6" (yari-get-ri-version "ri 2.5.6")))))
+
+;;; Modifications by Perry Smith start here.  These are stolen from my
+;;; version of ri-ruby.el and create 'buttons' in the emacs buffer.
+;;; This was done on Jan. 16, 2011 Lets see how this goes...
+
+(define-button-type 'yari-method
+  'help-echo "mouse-2, RET: Display yari help on this method"
+  'follow-link t
+  'action (lambda (button)
+	    (yari (button-get button 'yari-method))))
+
+(defcustom yari-emacs-method-face
+  'underline
+  "*Face for method name in yari output, or nil for none."
+  :group 'yari
+  :type 'face)
+
+(defvar yari-debug nil)			;set to t when debugging
+
+(defun yari-find-buttons ( )
+  (goto-char (point-min))
+  ;; The types of pages I know of so far is an instance method or a
+  ;; class method.  In those cases, we find the class in the first
+  ;; line and make a button for it.  The other searches are going to
+  ;; fail.
+  ;;
+  ;; The other type of page I know of is a Module or a Class (which I
+  ;; treat the same so far).  In this case, I want to make a button
+  ;; for the subclass so we can easily walk up the tree.  I also need
+  ;; to save off the original class or module.
+  ;;
+  ;; For Class and Module pages, we continue to scan down the page
+  ;; looking for Includes, Class methods: and Instance Methods making
+  ;; buttons for each of the entries under each of those sections.
+  ;;
+  ;; For the class and instance methods, the class or module that the
+  ;; page is displaying has to be prepended to the method name with
+  ;; either a "::" or a "#" in between.
+  ;;
+  ;; Ruby 1.9 formats the page different.  The first line is all -'s.
+  ;; The second line has what use to be at the end of the first line
+  (let* ((bol (progn
+		(if (looking-at "^-+$")
+		    (forward-line 1))
+		(point)))
+	 (eol (progn (forward-line 1) (point)))
+	 (includes-start (re-search-forward "^Includes:" nil t))
+	 (class-start  (re-search-forward "^Class methods:" nil t))
+	 (instance-start (re-search-forward "^Instance methods:" nil t))
+	 (page-end (point-max))
+	 (class nil)
+	 (parent-class nil)
+	 (base-class nil)
+	 (method nil)
+	 search-end)
+    (goto-char bol)
+    ;; Not parsing the base class "< Foo" string yet
+    (if (re-search-forward
+	 " ?\\(\\(Module\\|Class\\): \\)?\\(\\(\\(\\([^#: ]+\\)\\(::\\|#\\)\\)*\\)\\([^: ]+\\)\\)\\( < \\([^ \r\n\t]+\\)\\)?[ \r\t\n]*$"
+	 eol t)
+	(progn
+	  (if t
+	      (progn
+		;; "Class: " or "Module: " if present
+		(and yari-debug (message (format "match  1: '%s'" (match-string 1))))
+		;; "Class" or "Module"
+		(and yari-debug (message (format "match  2: '%s'" (match-string 2))))
+		;; entire class, module, or method string
+		(and yari-debug (message (format "match  3: '%s'" (match-string 3))))
+		;; #3 with final segment removed but the # or :: still
+		;; attached
+		(and yari-debug (message (format "match  4: '%s'" (match-string 4))))
+		;; The piece of the A::B::C:: string.  This is not
+		;; useful that I can see.
+		(and yari-debug (message (format "match  5: '%s'" (match-string 5))))
+		;; #4 but with the :: or # removed
+		(and yari-debug (message (format "match  6: '%s'" (match-string 6))))
+		;; The final :: or #
+		(and yari-debug (message (format "match  7: '%s'" (match-string 7))))
+		;; The method name if a method was looked up.  If a
+		;; class or module was looked up, this is just the
+		;; final segment of what was looked up.
+		(and yari-debug (message (format "match  8: '%s'" (match-string 8))))
+		;; "< base class" if present
+		(and yari-debug (message (format "match  9: '%s'" (match-string 9))))
+		;; "base class" if present
+		(and yari-debug (message (format "match 10: '%s'" (match-string 10))))))
+ 	  (if (match-string 1)
+ 	      (progn
+ 		(and yari-debug (message "have module"))
+ 		(setq class (match-string 3)))
+ 	    (and yari-debug (message "do not have module"))
+ 	    (setq method (match-string 8)))
+	  ;; Icky but we need to trim off the last :: or #
+	  (if (< (match-beginning 4) (match-end 4))
+	      (setq parent-class (buffer-substring (match-beginning 4)
+						   (match-beginning 7))))
+	  (setq base-class (match-string 10))
+	  (and yari-debug (message (format "base-class %s" base-class)))
+ 	  (and yari-debug (message (format "parent-class %s" parent-class)))
+	  ;; Make a button for the parent class if any
+	  (if (< (match-beginning 4) (match-end 4))
+	      (make-button (match-beginning 4)
+			   (match-beginning 7)
+			   'type 'yari-method
+			   'face yari-emacs-method-face
+			   'yari-method parent-class))
+	  ;; Make a button for the base class if any
+	  (if base-class
+	      (make-button (match-beginning 10)
+			   (match-end 10)
+			   'type 'yari-method
+			   'face yari-emacs-method-face
+			   'yari-method base-class))
+ 	  ;; If these match, then it must be a Module or a Class.  So
+ 	  ;; use the class as the containing class or module
+ 	  ;; name.
+ 	  (if includes-start
+ 	      (progn
+ 		(goto-char includes-start)
+ 		(setq search-end (or class-start instance-start page-end))
+ 		(while (re-search-forward " +\\([^, \n\r\t]+\\)" search-end t)
+ 		  (make-button (match-beginning 1)
+ 			       (match-end 1)
+ 			       'type 'yari-method
+ 			       'face yari-emacs-method-face
+ 			       'yari-method (match-string 1)))))
+ 	  (if class-start
+ 	      (progn
+ 		(goto-char class-start)
+ 		(setq search-end (or instance-start page-end))
+ 		(while (re-search-forward " +\\([^, \n\r\t]+\\)" search-end t)
+ 		  (make-button (match-beginning 1)
+ 			       (match-end 1)
+ 			       'type 'yari-method
+ 			       'face yari-emacs-method-face
+ 			       'yari-method  (concat class "::" (match-string 1))))))
+ 	  (if instance-start
+ 	      (progn
+ 		(goto-char instance-start)
+ 		(while (re-search-forward " +\\([^, \n\r\t]+\\)" nil t)
+ 		  (make-button (match-beginning 1)
+ 			       (match-end 1)
+ 			       'type 'yari-method
+ 			       'face yari-emacs-method-face
+ 			       'yari-method (concat class "#" (match-string 1)))))))
+      (and yari-debug (message "total miss")))))
+
+;;; Modifications by Perry Smith end here.
 
 (provide 'yari)
 ;;; yari.el ends here
