@@ -5,7 +5,7 @@ RUBY_FOR_RDOC = {
   '2.0.0' => '1.8.7',
   '1.0.0' => 'system'
 }
-RUBY_FOR_RDOC.default = '1.9.2-head'
+RUBY_FOR_RDOC.default = '1.9.2'
 
 namespace :gemsets do
   desc "Prepare gemsets with different versions of RDoc."
@@ -31,7 +31,7 @@ namespace :gemsets do
 
   desc "Remove all gemsets created for testing against different versions of RDoc."
   task :cleanup do
-    [ '1.9.2-head', '1.8.7' ].each do |ruby_version|
+    [ '1.9.2', '1.8.7' ].each do |ruby_version|
       cmd = "rvm #{ruby_version} && rvm gemset list | egrep '^rdoc'"
       output_for(cmd).each do |gemset|
         bash "rvm #{ruby_version} && rvm --force gemset delete #{gemset}"
@@ -47,7 +47,7 @@ task :test do
   if ENV['VERSIONS']
     versions = ENV['VERSIONS'].split /,/
   else
-    [ '1.9.2-head', '1.8.7' ].each do |ruby_version|
+    [ '1.9.2', '1.8.7' ].each do |ruby_version|
       output_for("rvm #{ruby_version} && rvm gemset list").each do |gemset|
         next unless gemset =~ /rdoc(.*)/
         versions << $1
