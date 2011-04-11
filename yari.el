@@ -147,10 +147,10 @@
 
 (defun yari-ri-lookup (name)
   "Return content from ri for NAME."
-  (if (member name (yari-ruby-obarray))
-      (shell-command-to-string
-       (format "ri -T -f ansi %s" (shell-quote-argument name)))
-    (format "%s is unknown symbol to RI." name)))
+  (assert (member name (yari-ruby-obarray)) nil
+          (format "%s is unknown symbol to RI." name))
+  (shell-command-to-string
+   (format "ri -T -f ansi %s" (shell-quote-argument name))))
 
 (when-ert-loaded
  (ert-deftest yari-test-ri-lookup-should-generate-error ()
