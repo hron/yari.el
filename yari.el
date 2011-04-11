@@ -51,6 +51,8 @@
 
 ;;; Code:
 
+(eval-when-compile (require 'cl))
+
 (require 'thingatpt)
 (require 'ansi-color)
 
