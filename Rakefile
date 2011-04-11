@@ -16,7 +16,7 @@ namespace :gemsets do
       unless ENV['VERSIONS'] =~ /rdoc \((.*)\)/
         abort "cannot see any rdoc versions."
       end
-      ENV['VERSIONS'] = $1
+      ENV['VERSIONS'] = $1.gsub(/ ruby/, '')
     end
 
 
