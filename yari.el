@@ -65,6 +65,9 @@
   :group 'yari
   :type 'hook)
 
+(defcustom yari-ri-program-name "ri"
+  "This constant defines how yari.el will find ri, e.g. `ri1.9'.")
+
 (defvar yari-anything-source-ri-pages
   '((name . "RI documentation")
     (candidates . (lambda () (yari-ruby-obarray)))
@@ -150,7 +153,8 @@
   (assert (member name (yari-ruby-obarray)) nil
           (format "%s is unknown symbol to RI." name))
   (shell-command-to-string
-   (format "ri -T -f ansi %s" (shell-quote-argument name))))
+   (format (concat yari-ri-program-name " -T -f ansi %s")
+           (shell-quote-argument name))))
 
 (when-ert-loaded
  (ert-deftest yari-test-ri-lookup-should-generate-error ()
@@ -273,8 +277,9 @@
 
 (defun yari-get-ri-version (&optional version)
   "Return list of version parts or RI."
-  (let* ((raw-version-output (or version
-                                 (shell-command-to-string "ri --version")))
+  (let* ((raw-version-output
+          (or version (shell-command-to-string
+                       (concat yari-ri-program-name " --version"))))
          (raw-version (cadr (split-string raw-version-output))))
     (string-match "v?\\(.*\\)" raw-version)
     (match-string 1 raw-version)))
