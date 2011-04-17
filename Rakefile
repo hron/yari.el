@@ -2,8 +2,7 @@ require 'tempfile'
 
 RUBY_FOR_RDOC = {
   '2.1.0' => '1.8.7',
-  '2.0.0' => '1.8.7',
-  '1.0.0' => 'system'
+  '2.0.0' => '1.8.7'
 }
 RUBY_FOR_RDOC.default = '1.9.2'
 
@@ -43,7 +42,7 @@ end
 
 desc "Test yari for ri VERSIONS=x,x,x."
 task :test do
-  versions = [ '1.0.0' ]
+  versions = []
   if ENV['VERSIONS']
     versions = ENV['VERSIONS'].split /,/
   else
