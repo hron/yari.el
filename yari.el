@@ -68,7 +68,7 @@
 (defcustom yari-ri-program-name "ri"
   "This constant defines how yari.el will find ri, e.g. `ri1.9'.")
 
-(defvar yari-anything-source-ri-pages
+(defvar yari-source-ri-pages
   '((name . "RI documentation")
     (candidates . (lambda () (yari-ruby-obarray)))
     (action  ("Show with Yari" . yari))
@@ -80,7 +80,13 @@
 (defun yari-anything (&optional rehash)
   (interactive (list current-prefix-arg))
   (when current-prefix-arg (yari-ruby-obarray rehash))
-  (anything 'yari-anything-source-ri-pages (yari-symbol-at-point)))
+  (anything 'yari-source-ri-pages (yari-symbol-at-point)))
+
+;;;###autoload
+(defun yari-helm (&optional rehash)
+  (interactive (list current-prefix-arg))
+  (when current-prefix-arg (yari-ruby-obarray rehash))
+  (helm 'yari-source-ri-pages (yari-symbol-at-point)))
 
 ;;;###autoload
 (defun yari (&optional ri-topic rehash)
@@ -88,14 +94,14 @@
   (interactive (list nil current-prefix-arg))
   (let ((completing-read-func (if (null ido-mode)
                                   'completing-read
-				'ido-completing-read)))
+                                'ido-completing-read)))
     (setq ri-topic (or ri-topic
                        (funcall completing-read-func
-				"yari: "
-				(yari-ruby-obarray rehash)
-				nil
-				t
-				(yari-symbol-at-point)))))
+                                "yari: "
+                                (yari-ruby-obarray rehash)
+                                nil
+                                t
+                                (yari-symbol-at-point)))))
   (let ((yari-buffer-name (format "*yari %s*" ri-topic)))
     (unless (get-buffer yari-buffer-name)
       (let ((yari-buffer (get-buffer-create yari-buffer-name))
@@ -143,7 +149,7 @@
  (defmacro yari-with-ruby-obarray-cache-mock (cache-mock &rest body)
    (declare (indent 1))
    `(unwind-protect
-	(let* ((,cache-mock '("NotExistClassInRuby" "NotExistClassInRuby#mmmmm"))
+        (let* ((,cache-mock '("NotExistClassInRuby" "NotExistClassInRuby#mmmmm"))
                (yari-ruby-obarray-cache ,cache-mock))
           ,@body))))
 
@@ -217,7 +223,7 @@
                            puts driver.list_known_classes; \
                            puts driver.list_methods_matching('.')"))
            (split-string (yari-eval-ruby-code ruby-code))))
-	((yari-ri-version-at-least "2.2.0")
+        ((yari-ri-version-at-least "2.2.0")
          (let ((ruby-code "require 'rdoc/ri/reader'; \
                            require 'rdoc/ri/cache';  \
                            require 'rdoc/ri/paths';  \
@@ -226,14 +232,14 @@
                            reader = RDoc::RI::Reader.new(cache);    \
                            puts reader.all_names"))
            (split-string (yari-eval-ruby-code ruby-code))))
-	((yari-ri-version-at-least "2.0.0")
+        ((yari-ri-version-at-least "2.0.0")
          (let ((ruby-code "require 'rdoc/ri/driver';            \
                            driver  = RDoc::RI::Driver.new;      \
                            puts driver.class_cache.keys;        \
                            methods = driver.select_methods(//); \
                            puts methods.map{|m| m['full_name']}"))
            (split-string (yari-eval-ruby-code ruby-code))))
-	((yari-ri-version-at-least "1.0.0")
+        ((yari-ri-version-at-least "1.0.0")
          (let ((ruby-code "require 'rdoc/ri/ri_reader'; \
                            require 'rdoc/ri/ri_cache';  \
                            require 'rdoc/ri/ri_paths'; \
@@ -242,7 +248,7 @@
                            reader = RI::RiReader.new(cache);    \
                            puts reader.all_names;"))
            (split-string (yari-eval-ruby-code ruby-code))))
-	(t
+        (t
          (error "Unknown Ri version."))))
 
 (defun yari-eval-ruby-code (ruby-code)
@@ -259,7 +265,7 @@
                          (bad-thing-found-p))
                      (mapc '(lambda (line)
                               (when (string-match "Updating class cache" line)
-				(setq bad-thing-found-p t)))
+                                (setq bad-thing-found-p t)))
                            (yari-ruby-obarray))
                      bad-thing-found-p)))
 
