@@ -82,6 +82,25 @@
   (when current-prefix-arg (yari-ruby-obarray rehash))
   (anything 'yari-anything-source-ri-pages (yari-symbol-at-point)))
 
+(defvar yari-helm-ri-pages
+  `((name . "RI documentation")
+    (init . (lambda ()
+              (helm-init-candidates-in-buffer
+               'local
+               (yari-ruby-obarray nil t))))
+    (candidates-in-buffer)
+    (candidate-number-limit . 300)
+    (action . yari))
+  "Source for completing RI documentation.")
+
+;;;###autoload
+(defun yari-helm ()
+  (interactive)
+  (helm :sources '(yari-helm-ri-pages)
+        :buffer "*yari-helm*"
+        :prompt "yari: "
+        :input (yari-symbol-at-point)))
+
 ;;;###autoload
 (defun yari (&optional ri-topic rehash)
   "Look up Ruby documentation."
@@ -171,12 +190,12 @@
 (defvar yari-ruby-obarray-cache nil
   "Variable to store all possible completions of RI pages.")
 
-(defun yari-ruby-obarray (&optional rehash)
+(defun yari-ruby-obarray (&optional rehash do-not-split)
   "Build collection of classes and methods for completions."
-  (if (and (null rehash) (consp yari-ruby-obarray-cache))
-      ;; TODO: I do not know how to return from here properly... ;]
-      (setq yari-ruby-obarray-cache yari-ruby-obarray-cache)
-    (setq yari-ruby-obarray-cache (yari-ruby-methods-from-ri))))
+  (let ((output (yari-ruby-methods-from-ri rehash)))
+    (if do-not-split
+        output
+      (split-string output))))
 
 (when-ert-loaded
  (ert-deftest yari-test-ruby-obarray-should-rehash ()
@@ -208,42 +227,42 @@
  (ert-deftest yari-test-ruby-obarray-for-object-method ()
    (ert-should (member "RDoc::TopLevel#full_name" (yari-ruby-obarray)))))
 
-
-(defun yari-ruby-methods-from-ri ()
-  "Return list with all ruby methods known to ri command."
-  (cond ((yari-ri-version-at-least "2.5")
-         (let ((ruby-code "require 'rdoc/ri/driver';       \
-                           driver  = RDoc::RI::Driver.new; \
-                           puts driver.list_known_classes; \
-                           puts driver.list_methods_matching('.')"))
-           (split-string (yari-eval-ruby-code ruby-code))))
-	((yari-ri-version-at-least "2.2.0")
-         (let ((ruby-code "require 'rdoc/ri/reader'; \
-                           require 'rdoc/ri/cache';  \
-                           require 'rdoc/ri/paths';  \
-                           all_paths = RDoc::RI::Paths.path(true,true,true,true); \
-                           cache  = RDoc::RI::Cache.new(all_paths); \
-                           reader = RDoc::RI::Reader.new(cache);    \
-                           puts reader.all_names"))
-           (split-string (yari-eval-ruby-code ruby-code))))
-	((yari-ri-version-at-least "2.0.0")
-         (let ((ruby-code "require 'rdoc/ri/driver';            \
-                           driver  = RDoc::RI::Driver.new;      \
-                           puts driver.class_cache.keys;        \
-                           methods = driver.select_methods(//); \
-                           puts methods.map{|m| m['full_name']}"))
-           (split-string (yari-eval-ruby-code ruby-code))))
-	((yari-ri-version-at-least "1.0.0")
-         (let ((ruby-code "require 'rdoc/ri/ri_reader'; \
-                           require 'rdoc/ri/ri_cache';  \
-                           require 'rdoc/ri/ri_paths'; \
-                           all_paths = RI::Paths.path(true,true,true,true); \
-                           cache = RI::RiCache.new(all_paths); \
-                           reader = RI::RiReader.new(cache);    \
-                           puts reader.all_names;"))
-           (split-string (yari-eval-ruby-code ruby-code))))
-	(t
-         (error "Unknown Ri version."))))
+(defun yari-ruby-methods-from-ri (rehash)
+  "Return string with all ruby methods known to ri command."
+  (if (or rehash (null yari-ruby-obarray-cache))
+    (setq yari-ruby-obarray-cache
+          (yari-eval-ruby-code
+            (cond
+             ((yari-ri-version-at-least "2.5")
+               "require 'rdoc/ri/driver';       \
+                driver  = RDoc::RI::Driver.new; \
+                puts driver.list_known_classes; \
+                puts driver.list_methods_matching('.')")
+              ((yari-ri-version-at-least "2.2.0")
+               "require 'rdoc/ri/reader'; \
+                require 'rdoc/ri/cache';  \
+                require 'rdoc/ri/paths';  \
+                all_paths = RDoc::RI::Paths.path(true,true,true,true); \
+                cache  = RDoc::RI::Cache.new(all_paths); \
+                reader = RDoc::RI::Reader.new(cache);    \
+                puts reader.all_names")
+              ((yari-ri-version-at-least "2.0.0")
+               "require 'rdoc/ri/driver';            \
+                driver  = RDoc::RI::Driver.new;      \
+                puts driver.class_cache.keys;        \
+                methods = driver.select_methods(//); \
+                puts methods.map{|m| m['full_name']}")
+              ((yari-ri-version-at-least "1.0.0")
+               "require 'rdoc/ri/ri_reader'; \
+                require 'rdoc/ri/ri_cache';  \
+                require 'rdoc/ri/ri_paths'; \
+                all_paths = RI::Paths.path(true,true,true,true); \
+                cache = RI::RiCache.new(all_paths); \
+                reader = RI::RiReader.new(cache);    \
+                puts reader.all_names;")
+              (t
+               (error "Unknown Ri version.")))))
+     yari-ruby-obarray-cache))
 
 (defun yari-eval-ruby-code (ruby-code)
   "Return stdout from ruby -rrubyges -eRUBY-CODE."
