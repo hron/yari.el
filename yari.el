@@ -34,7 +34,7 @@
 ;; Self-testing covers all versions from 1.0.1 to 2.5.8 (current).
 ;;
 ;; The main function you should use as interface to ri is M-x yari
-;; (yari-anything is a variant using Anything input framework). I recommend to
+;; (yari-helm is a variant using Helm input framework). I recommend to
 ;; bind it on some key local when you are ruby-mode. Here is the example:
 ;;
 ;; (defun ri-bind-key ()
@@ -43,7 +43,7 @@
 ;;  or
 ;;
 ;; (defun ri-bind-key ()
-;;   (local-set-key [f1] 'yari-anything))
+;;   (local-set-key [f1] 'yari-helm))
 ;;
 ;; (add-hook 'ruby-mode-hook 'ri-bind-key)
 ;;
