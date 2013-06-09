@@ -1,10 +1,20 @@
 require 'tempfile'
 
 RUBY_FOR_RDOC = {
+  '2.5' => '1.9.3',
+  '2.4.3' => '1.9.3',
+  '2.4.2' => '1.9.3',
+  '2.4.1' => '1.9.3',
+  '2.4.0' => '1.9.3',
+  '2.3.0' => '1.9.3',
+  '2.2.1' => '1.9.3',
+  '2.2.0' => '1.9.3',
   '2.1.0' => '1.8.7',
   '2.0.0' => '1.8.7'
 }
-RUBY_FOR_RDOC.default = '1.9.2'
+RUBY_FOR_RDOC.default = '2.0.0'
+
+RUBY_VERSIONS = ['2.0.0', '1.9.3', '1.8.7']
 
 namespace :gemsets do
   desc "Prepare gemsets with different versions of RDoc."
@@ -30,7 +40,7 @@ namespace :gemsets do
 
   desc "Remove all gemsets created for testing against different versions of RDoc."
   task :cleanup do
-    [ '1.9.2', '1.8.7' ].each do |ruby_version|
+    RUBY_VERSIONS.each do |ruby_version|
       cmd = "rvm #{ruby_version} && rvm gemset list | egrep '^rdoc'"
       output_for(cmd).each do |gemset|
         bash "rvm #{ruby_version} && rvm --force gemset delete #{gemset}"
@@ -46,7 +56,7 @@ task :test do
   if ENV['VERSIONS']
     versions = ENV['VERSIONS'].split /,/
   else
-    [ '1.9.2', '1.8.7' ].each do |ruby_version|
+    RUBY_VERSIONS.each do |ruby_version|
       output_for("rvm #{ruby_version} && rvm gemset list").each do |gemset|
         next unless gemset =~ /rdoc(.*)/
         versions << $1
@@ -71,15 +81,11 @@ end
 def lisp_test_file
   lisp_test = Tempfile.new('ri-tests-el')
   lisp_test << <<-LISP
-(mapc '(lambda (path)
-         (add-to-list 'load-path (expand-file-name path)))
-      '("." "./vendor"))
+(add-to-list 'load-path (expand-file-name "."))
 (require 'ert)
 (load "yari.el")
 (let ((stats (ert-run-tests-batch "^yari-")))
-  (kill-emacs (+ (ert-stats-passed-unexpected stats)
-                 (ert-stats-failed-unexpected stats)
-                 (ert-stats-error-unexpected stats))))
+  (kill-emacs (ert-stats-completed-unexpected stats)))
 LISP
   lisp_test.close
   lisp_test

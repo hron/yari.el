@@ -177,14 +177,14 @@
 
 (when-ert-loaded
  (ert-deftest yari-test-ri-lookup-should-generate-error ()
-   (ert-should-error
+   (should-error
     (yari-ri-lookup "AbSoLuTttelyImposibleThisexists#bbb?")))
 
  (ert-deftest yari-test-ri-lookup-should-have-content ()
-   (ert-should (string-match "RDoc" (yari-ri-lookup "RDoc"))))
+   (should (string-match "RDoc" (yari-ri-lookup "RDoc"))))
 
  (ert-deftest yari-test-ri-lookup ()
-   (ert-should (yari-ri-lookup "RDoc"))))
+   (should (yari-ri-lookup "RDoc"))))
 
 
 (defvar yari-ruby-obarray-cache nil
@@ -202,30 +202,26 @@
    (yari-with-ruby-obarray-cache-mock
     cache-mock
     (yari-ruby-obarray t)
-    (ert-should-not (equal yari-ruby-obarray-cache cache-mock))))
+    (should-not (equal yari-ruby-obarray-cache cache-mock))))
 
- (ert-deftest yari-test-ruby-obarray-should-use-cache ()
-   (yari-with-ruby-obarray-cache-mock
-    cache-mock
-    (yari-ruby-obarray)
-    (ert-should (equal yari-ruby-obarray-cache cache-mock))))
+
 
  (ert-deftest yari-test-ruby-obarray-should-set-cache ()
    (let ((yari-ruby-obarray-cache))
      (yari-ruby-obarray)
-     (ert-should yari-ruby-obarray-cache)))
+     (should yari-ruby-obarray-cache)))
 
  (ert-deftest yari-test-ruby-obarray-for-class-first-level ()
-   (ert-should (member "RDoc" (yari-ruby-obarray))))
+   (should (member "RDoc" (yari-ruby-obarray))))
 
  (ert-deftest yari-test-ruby-obarray-for-class-deep-level ()
-   (ert-should (member "RDoc::TopLevel" (yari-ruby-obarray))))
+   (should (member "RDoc::TopLevel" (yari-ruby-obarray))))
 
  (ert-deftest yari-test-ruby-obarray-for-class-method ()
-   (ert-should (member "RDoc::TopLevel::new" (yari-ruby-obarray))))
+   (should (member "RDoc::TopLevel::new" (yari-ruby-obarray))))
 
  (ert-deftest yari-test-ruby-obarray-for-object-method ()
-   (ert-should (member "RDoc::TopLevel#full_name" (yari-ruby-obarray)))))
+   (should (member "RDoc::TopLevel#full_name" (yari-ruby-obarray)))))
 
 (defun yari-ruby-methods-from-ri (rehash)
   "Return string with all ruby methods known to ri command."
@@ -264,17 +260,24 @@
                (error "Unknown Ri version.")))))
      yari-ruby-obarray-cache))
 
+(when-ert-loaded
+ (ert-deftest yari-test-ruby-obarray-should-use-cache ()
+   (yari-with-ruby-obarray-cache-mock
+       cache-mock
+     (yari-ruby-methods-from-ri nil)
+     (should (equal yari-ruby-obarray-cache cache-mock)))))
+
 (defun yari-eval-ruby-code (ruby-code)
   "Return stdout from ruby -rrubyges -eRUBY-CODE."
   (shell-command-to-string (format "ruby -rrubygems -e\"%s\"" ruby-code)))
 
 (when-ert-loaded
  (ert-deftest yari-test-ruby-obarray-filter-standard-warning ()
-   (ert-should-not (member ". not found, maybe you meant:"
+   (should-not (member ". not found, maybe you meant:"
                            (yari-ruby-obarray))))
 
  (ert-deftest yari-test-ruby-obarray-filter-updating-class-cache ()
-   (ert-should-not (let ((case-fold-search nil)
+   (should-not (let ((case-fold-search nil)
                          (bad-thing-found-p))
                      (mapc '(lambda (line)
                               (when (string-match "Updating class cache" line)
@@ -283,10 +286,10 @@
                      bad-thing-found-p)))
 
  (ert-deftest yari-test-ruby-obarray-filter-empty-string ()
-   (ert-should-not (member "" (yari-ruby-obarray))))
+   (should-not (member "" (yari-ruby-obarray))))
 
  (ert-deftest yari-test-ruby-obarray-filter-standard-ruler ()
-   (ert-should-not (member "----------------------------------------------"
+   (should-not (member "----------------------------------------------"
                            (yari-ruby-obarray)))))
 
 (defun yari-ri-version-at-least (minimum)
@@ -305,9 +308,9 @@
 
 (when-ert-loaded
  (ert-deftest yari-test-get-ri-version-for-1.0.0 ()
-   (ert-should (equal "1.0.1" (yari-get-ri-version "ri v1.0.1 - 20041108"))))
+   (should (equal "1.0.1" (yari-get-ri-version "ri v1.0.1 - 20041108"))))
  (ert-deftest yari-test-get-ri-version-for-2.5.6 ()
-   (ert-should (equal "2.5.6" (yari-get-ri-version "ri 2.5.6")))))
+   (should (equal "2.5.6" (yari-get-ri-version "ri 2.5.6")))))
 
 (provide 'yari)
 ;;; yari.el ends here
