@@ -119,7 +119,6 @@
     (unless (get-buffer yari-buffer-name)
       (let ((yari-buffer (get-buffer-create yari-buffer-name))
             (ri-content (yari-ri-lookup ri-topic)))
-        (display-buffer yari-buffer)
         (with-current-buffer yari-buffer
           (erase-buffer)
           (insert ri-content)
