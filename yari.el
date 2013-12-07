@@ -1,6 +1,6 @@
 ;;; yari.el --- Yet Another RI interface for Emacs
 
-;; Copyright (C) 2010  Aleksei Gusev, Jose Pablo Barrantes
+;; Copyright (C) 2010  Aleksei Gusev, Jose Pablo Barrantes, Perry Smith
 
 ;; Author: Aleksei Gusev <aleksei.gusev@gmail.com>
 ;; Maintainer: Aleksei Gusev <aleksei.gusev@gmail.com>
