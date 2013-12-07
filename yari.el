@@ -312,10 +312,9 @@
  (ert-deftest yari-test-get-ri-version-for-2.5.6 ()
    (should (equal "2.5.6" (yari-get-ri-version "ri 2.5.6")))))
 
-;;; Modifications by Perry Smith start here.  These are stolen from my
-;;; version of ri-ruby.el and create 'buttons' in the emacs buffer.
-;;; This was done on Jan. 16, 2011 Lets see how this goes...
-
+;;
+;; Buttons for method/class names in yari buffer.
+;;
 (define-button-type 'yari-method
   'help-echo "mouse-2, RET: Display yari help on this method"
   'follow-link t
@@ -450,7 +449,7 @@
 						   (match-beginning 7))))
 	  (setq base-class match-string10)
 	  (and yari-debug (message (format "base-class %s" base-class)))
- 	  (and yari-debug (message (format "parent-class %s" parent-class)))
+	  (and yari-debug (message (format "parent-class %s" parent-class)))
 	  ;; Make a button for the parent class if any
 	  (if (< (match-beginning 4) (match-end 4))
 	      (make-button (match-beginning 4)
@@ -465,57 +464,55 @@
 			   'type 'yari-method
 			   'face yari-emacs-method-face
 			   'yari-method base-class))
- 	  ;; If these match, then it must be a Module or a Class.  So
- 	  ;; use the class as the containing class or module
- 	  ;; name.
- 	  (if includes-start
- 	      (progn
+	  ;; If these match, then it must be a Module or a Class.  So
+	  ;; use the class as the containing class or module
+	  ;; name.
+	  (if includes-start
+	      (progn
 		(goto-char (or constant-start class-start instance-start page-end))
 		(forward-line 0)
- 		(setq search-end (point))
- 		(goto-char includes-start)
- 		(while (re-search-forward include-pat search-end t)
- 		  (make-button (match-beginning 1)
- 			       (match-end 1)
- 			       'type 'yari-method
- 			       'face yari-emacs-method-face
- 			       'yari-method (match-string 1)))))
- 	  (if (and constant-start constant-pat)
- 	      (progn
+		(setq search-end (point))
+		(goto-char includes-start)
+		(while (re-search-forward include-pat search-end t)
+		  (make-button (match-beginning 1)
+			       (match-end 1)
+			       'type 'yari-method
+			       'face yari-emacs-method-face
+			       'yari-method (match-string 1)))))
+	  (if (and constant-start constant-pat)
+	      (progn
 		(goto-char (or class-start instance-start page-end))
 		(forward-line 0)
- 		(setq search-end (point))
- 		(goto-char constant-start)
- 		(while (re-search-forward constant-pat search-end t)
- 		  (make-button (match-beginning 1)
- 			       (match-end 1)
- 			       'type 'yari-method
- 			       'face yari-emacs-method-face
- 			       'yari-method  (concat class "::" (match-string 1))))))
- 	  (if class-start
- 	      (progn
+		(setq search-end (point))
+		(goto-char constant-start)
+		(while (re-search-forward constant-pat search-end t)
+		  (make-button (match-beginning 1)
+			       (match-end 1)
+			       'type 'yari-method
+			       'face yari-emacs-method-face
+			       'yari-method  (concat class "::" (match-string 1))))))
+	  (if class-start
+	      (progn
 		(goto-char (or instance-start page-end))
 		(forward-line 0)
- 		(setq search-end (point))
- 		(goto-char class-start)
- 		(while (re-search-forward class-pat search-end t)
- 		  (make-button (match-beginning 1)
- 			       (match-end 1)
- 			       'type 'yari-method
- 			       'face yari-emacs-method-face
- 			       'yari-method  (concat class "::" (match-string 1))))))
- 	  (if instance-start
- 	      (progn
- 		(goto-char instance-start)
- 		(while (re-search-forward instance-pat nil t)
- 		  (make-button (match-beginning 1)
- 			       (match-end 1)
- 			       'type 'yari-method
- 			       'face yari-emacs-method-face
- 			       'yari-method (concat class "#" (match-string 1)))))))
+		(setq search-end (point))
+		(goto-char class-start)
+		(while (re-search-forward class-pat search-end t)
+		  (make-button (match-beginning 1)
+			       (match-end 1)
+			       'type 'yari-method
+			       'face yari-emacs-method-face
+			       'yari-method  (concat class "::" (match-string 1))))))
+	  (if instance-start
+	      (progn
+		(goto-char instance-start)
+		(while (re-search-forward instance-pat nil t)
+		  (make-button (match-beginning 1)
+			       (match-end 1)
+			       'type 'yari-method
+			       'face yari-emacs-method-face
+			       'yari-method (concat class "#" (match-string 1)))))))
       (and yari-debug (message "total miss")))))
-
-;;; Modifications by Perry Smith end here.
 
 (provide 'yari)
 ;;; yari.el ends here
