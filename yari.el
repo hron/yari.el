@@ -150,6 +150,7 @@
   (setq mode-name "yari")
   (setq major-mode 'yari-mode)
   (yari-find-buttons)
+  (goto-char (point-min))
   (setq buffer-read-only t)
   (run-hooks 'yari-mode-hook))
 
