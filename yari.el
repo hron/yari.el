@@ -68,6 +68,9 @@
 (defcustom yari-ri-program-name "ri"
   "This constant defines how yari.el will find ri, e.g. `ri1.9'.")
 
+(defcustom yari-ruby-program-name "ruby"
+  "This constant defines how yari.el will find ruby, e.g. `ruby1.9'.")
+
 (defvar yari-anything-source-ri-pages
   '((name . "RI documentation")
     (candidates . (lambda () (yari-ruby-obarray)))
@@ -270,7 +273,7 @@
 
 (defun yari-eval-ruby-code (ruby-code)
   "Return stdout from ruby -rrubyges -eRUBY-CODE."
-  (shell-command-to-string (format "ruby -rrubygems -e\"%s\"" ruby-code)))
+  (shell-command-to-string (format "%s -rrubygems -e\"%s\"" yari-ruby-program-name ruby-code)))
 
 (when-ert-loaded
  (ert-deftest yari-test-ruby-obarray-filter-standard-warning ()
