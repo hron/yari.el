@@ -235,7 +235,7 @@
             (cond
              ((yari-ri-version-at-least "2.5")
                "require 'rdoc/ri/driver';       \
-                driver  = RDoc::RI::Driver.new; \
+                driver  = RDoc::RI::Driver.new(RDoc::RI::Driver.process_args([])); \
                 puts driver.list_known_classes; \
                 puts driver.list_methods_matching('.')")
               ((yari-ri-version-at-least "2.2.0")
