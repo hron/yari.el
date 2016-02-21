@@ -128,7 +128,7 @@
           (ansi-color-apply-on-region (point-min) (point-max))
           (goto-char (point-min))
           (yari-mode))))
-    (display-buffer yari-buffer-name)))
+    (pop-to-buffer yari-buffer-name)))
 
 (defun yari-symbol-at-point ()
   ;; TODO: make this smart about class/module at point
