@@ -51,7 +51,7 @@
 
 ;;; Code:
 
-(eval-when-compile (require 'cl))
+(eval-when-compile (require 'cl-lib))
 
 (require 'thingatpt)
 (require 'ansi-color)
@@ -173,7 +173,7 @@
 
 (defun yari-ri-lookup (name)
   "Return content from ri for NAME."
-  (assert (member name (yari-ruby-obarray)) nil
+  (cl-assert (member name (yari-ruby-obarray)) nil
           (format "%s is unknown symbol to RI." name))
   (shell-command-to-string
    (format (concat yari-ri-program-name " -T -f ansi %s")
