@@ -8,8 +8,9 @@
          ,@body)))
 
 (ert-deftest yari-test-ri-lookup-should-generate-error ()
-  (should-error
-   (yari-ri-lookup "AbSoLuTttelyImposibleThisexists#bbb?")))
+  (let ((debug-on-error nil))
+    (should-error
+     (yari-ri-lookup "AbSoLuTttelyImposibleThisexists#bbb?"))))
 
 (ert-deftest yari-test-ri-lookup-should-have-content ()
   (should (string-match "RDoc" (yari-ri-lookup "RDoc"))))
