@@ -1,4 +1,4 @@
-;;; yari-test.el --- Tests for yari
+;;; yari-test.el --- Tests for yari  -*- lexical-binding: t; -*-
 
 (ert-deftest yari-test-ri-lookup-should-generate-error ()
   (let ((debug-on-error nil))
