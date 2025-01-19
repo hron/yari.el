@@ -1,12 +1,5 @@
 ;;; yari-test.el --- Tests for yari
 
-(defmacro yari-with-ruby-obarray-cache-mock (cache-mock &rest body)
-  (declare (indent 1))
-  `(unwind-protect
-	   (let* ((,cache-mock '("NotExistClassInRuby" "NotExistClassInRuby#mmmmm"))
-              (yari-ruby-obarray-cache ,cache-mock))
-         ,@body)))
-
 (ert-deftest yari-test-ri-lookup-should-generate-error ()
   (let ((debug-on-error nil))
     (should-error
