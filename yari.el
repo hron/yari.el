@@ -161,9 +161,12 @@
   "Return content from ri for NAME."
   (cl-assert (member name (yari-ruby-obarray)) nil
           (format "%s is unknown symbol to RI." name))
-  (shell-command-to-string
-   (concat yari-ri-program-name " -T -f ansi \""
-           (shell-quote-argument name) "\"")))
+  (with-temp-buffer
+    (call-process (executable-find yari-ri-program-name)
+                  nil (current-buffer) nil
+                  "-T" "-f" "ansi"
+                  name)
+    (buffer-string)))
 
 (defvar yari-ruby-obarray-cache nil
   "Variable to store all possible completions of RI pages.")

@@ -68,4 +68,13 @@
 (ert-deftest yari-test-get-ri-version-for-2.5.6 ()
   (should (equal "2.5.6" (yari-get-ri-version "ri 2.5.6"))))
 
+(ert-deftest yari-test-command-class ()
+  (yari-test-command "String"))
+
+(ert-deftest yari-test-command-method ()
+  (yari-test-command "String#chomp"))
+
+(ert-deftest yari-test-command-ampersand-operator ()
+  (yari-test-command "Array#&"))
+
 ;;; yari-test.el ends here
