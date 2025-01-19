@@ -162,8 +162,8 @@
   (cl-assert (member name (yari-ruby-obarray)) nil
           (format "%s is unknown symbol to RI." name))
   (shell-command-to-string
-   (format (concat yari-ri-program-name " -T -f ansi %s")
-           (shell-quote-argument name))))
+   (concat yari-ri-program-name " -T -f ansi \""
+           (shell-quote-argument name) "\"")))
 
 (defvar yari-ruby-obarray-cache nil
   "Variable to store all possible completions of RI pages.")

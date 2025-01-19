@@ -11,6 +11,9 @@
 (ert-deftest yari-test-ri-lookup ()
   (should (yari-ri-lookup "RDoc")))
 
+(ert-deftest yari-test-ri-lookup-array-intersection-operator ()
+  (should (yari-ri-lookup "Array#&")))
+
 (ert-deftest yari-test-ruby-obarray-should-rehash ()
   (yari-with-ruby-obarray-cache-mock
    cache-mock
