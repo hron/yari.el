@@ -1,11 +1,4 @@
-;;; yari-test.el --- Tests for yari
-
-(defmacro yari-with-ruby-obarray-cache-mock (cache-mock &rest body)
-  (declare (indent 1))
-  `(unwind-protect
-	   (let* ((,cache-mock '("NotExistClassInRuby" "NotExistClassInRuby#mmmmm"))
-              (yari-ruby-obarray-cache ,cache-mock))
-         ,@body)))
+;;; yari-test.el --- Tests for yari  -*- lexical-binding: t; -*-
 
 (ert-deftest yari-test-ri-lookup-should-generate-error ()
   (let ((debug-on-error nil))
@@ -17,6 +10,9 @@
 
 (ert-deftest yari-test-ri-lookup ()
   (should (yari-ri-lookup "RDoc")))
+
+(ert-deftest yari-test-ri-lookup-array-intersection-operator ()
+  (should (yari-ri-lookup "Array#&")))
 
 (ert-deftest yari-test-ruby-obarray-should-rehash ()
   (yari-with-ruby-obarray-cache-mock
